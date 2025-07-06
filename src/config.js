@@ -50,6 +50,25 @@ export function validateProfile(profile) {
     throw new Error(`Missing required fields: ${missing.join(', ')}`);
   }
   
+  // Validate collision handling option
+  if (profile.onCollision && !['rename', 'replace'].includes(profile.onCollision)) {
+    throw new Error(`Invalid onCollision value: ${profile.onCollision}. Must be 'rename' or 'replace'`);
+  }
+  
+  // Validate transfer mode option
+  if (profile.transferMode && !['copy', 'move'].includes(profile.transferMode)) {
+    throw new Error(`Invalid transferMode value: ${profile.transferMode}. Must be 'copy' or 'move'`);
+  }
+  
+  // Handle backward compatibility for copyFiles
+  let transferMode = profile.transferMode;
+  if (!transferMode && profile.copyFiles !== undefined) {
+    transferMode = profile.copyFiles ? 'copy' : 'move';
+  }
+  if (!transferMode) {
+    transferMode = 'copy'; // default to copy
+  }
+  
   return {
     sourcePath: profile.sourcePath,
     destinationRoot: profile.destinationRoot,
@@ -57,8 +76,9 @@ export function validateProfile(profile) {
     includeExtensions: profile.includeExtensions || ['.jpg', '.jpeg', '.raw', '.cr2', '.nef', '.arw', '.dng', '.mp4', '.mov', '.avi'],
     excludeExtensions: profile.excludeExtensions || [],
     excludeFolders: profile.excludeFolders || [],
-    copyFiles: profile.copyFiles !== false, // default to true
+    transferMode: transferMode,
     useExifDate: profile.useExifDate !== false, // default to true
+    onCollision: profile.onCollision || 'rename', // default to rename
   };
 }
 

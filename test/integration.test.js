@@ -211,4 +211,190 @@ describe('Integration Tests', () => {
       expect(copiedStats.size).toBe(originalStats.size);
     });
   });
+
+  describe('Transfer Mode Integration Tests', () => {
+    it('should copy files when transferMode is copy', async () => {
+      // Create test files
+      const testDir = join(sourceDir, 'DCIM');
+      await fs.mkdir(testDir, { recursive: true });
+      
+      const testFile = join(testDir, 'IMG_001.jpg');
+      const originalContent = 'test image content';
+      await fs.writeFile(testFile, originalContent);
+
+      // Simulate copy mode processing
+      const files = await scanFiles(sourceDir, ['.jpg'], [], []);
+      expect(files).toHaveLength(1);
+
+      const date = await extractFileDate(testFile, false);
+      const { targetDir, baseFilename } = generateTargetPath(date, 'TestCam', testFile, destDir);
+      const finalFilename = await findAvailableFilename(targetDir, baseFilename);
+      
+      // Process as copy (transferMode: copy -> copyFiles: true)
+      const resultPath = await processFile(testFile, targetDir, finalFilename, true);
+
+      // Verify both files exist (copy operation)
+      expect(await fs.readFile(testFile, 'utf-8')).toBe(originalContent);
+      expect(await fs.readFile(resultPath, 'utf-8')).toBe(originalContent);
+    });
+
+    it('should move files when transferMode is move', async () => {
+      // Create test files
+      const testDir = join(sourceDir, 'DCIM');
+      await fs.mkdir(testDir, { recursive: true });
+      
+      const testFile = join(testDir, 'IMG_002.jpg');
+      const originalContent = 'test image content for move';
+      await fs.writeFile(testFile, originalContent);
+
+      // Simulate move mode processing
+      const files = await scanFiles(sourceDir, ['.jpg'], [], []);
+      expect(files).toHaveLength(1);
+
+      const date = await extractFileDate(testFile, false);
+      const { targetDir, baseFilename } = generateTargetPath(date, 'TestCam', testFile, destDir);
+      const finalFilename = await findAvailableFilename(targetDir, baseFilename);
+      
+      // Process as move (transferMode: move -> copyFiles: false)
+      const resultPath = await processFile(testFile, targetDir, finalFilename, false);
+
+      // Verify source file doesn't exist, target file does (move operation)
+      expect(fs.access(testFile)).rejects.toThrow();
+      expect(await fs.readFile(resultPath, 'utf-8')).toBe(originalContent);
+    });
+  });
+
+  describe('Collision Handling Integration Tests', () => {
+    it('should rename files when onCollision is rename', async () => {
+      // Create test files
+      const testDir = join(sourceDir, 'DCIM');
+      await fs.mkdir(testDir, { recursive: true });
+      
+      const testFile1 = join(testDir, 'IMG_001.jpg');
+      const testFile2 = join(testDir, 'IMG_002.jpg');
+      await fs.writeFile(testFile1, 'content1');
+      await fs.writeFile(testFile2, 'content2');
+
+      // Set same modification time to create collision scenario
+      const sameDate = new Date('2025-07-06T12:00:00Z');
+      await fs.utimes(testFile1, sameDate, sameDate);
+      await fs.utimes(testFile2, sameDate, sameDate);
+
+      // Process first file
+      const { targetDir, baseFilename } = generateTargetPath(sameDate, 'TestCam', testFile1, destDir);
+      const filename1 = await findAvailableFilename(targetDir, baseFilename);
+      await processFile(testFile1, targetDir, filename1, true);
+
+      // Process second file (should get renamed due to collision)
+      const filename2 = await findAvailableFilename(targetDir, baseFilename);
+      await processFile(testFile2, targetDir, filename2, true);
+
+      // Verify both files exist with different names
+      const targetFiles = await fs.readdir(targetDir);
+      expect(targetFiles).toHaveLength(2);
+      expect(targetFiles.some(f => f === baseFilename)).toBe(true);
+      expect(targetFiles.some(f => f.includes('_1.'))).toBe(true);
+    });
+
+    it('should replace files when onCollision is replace', async () => {
+      // Create test files
+      const testDir = join(sourceDir, 'DCIM');
+      await fs.mkdir(testDir, { recursive: true });
+      
+      const testFile1 = join(testDir, 'IMG_001.jpg');
+      const testFile2 = join(testDir, 'IMG_002.jpg');
+      await fs.writeFile(testFile1, 'original content');
+      await fs.writeFile(testFile2, 'replacement content');
+
+      // Set same modification time to create collision scenario
+      const sameDate = new Date('2025-07-06T12:00:00Z');
+      await fs.utimes(testFile1, sameDate, sameDate);
+      await fs.utimes(testFile2, sameDate, sameDate);
+
+      // Process first file
+      const { targetDir, baseFilename } = generateTargetPath(sameDate, 'TestCam', testFile1, destDir);
+      await processFile(testFile1, targetDir, baseFilename, true); // Use baseFilename directly (replace mode)
+
+      // Process second file (should replace the first)
+      await processFile(testFile2, targetDir, baseFilename, true); // Use baseFilename directly (replace mode)
+
+      // Verify only one file exists with the replacement content
+      const targetFiles = await fs.readdir(targetDir);
+      expect(targetFiles).toHaveLength(1);
+      expect(targetFiles[0]).toBe(baseFilename);
+      
+      const resultPath = join(targetDir, baseFilename);
+      expect(await fs.readFile(resultPath, 'utf-8')).toBe('replacement content');
+    });
+  });
+
+  describe('Resource Fork Filtering Integration', () => {
+    it('should skip resource fork files during scanning', async () => {
+      // Create mixed file structure with resource forks
+      const dcimDir = join(sourceDir, 'DCIM', '100MEDIA');
+      await fs.mkdir(dcimDir, { recursive: true });
+
+      // Create files including resource forks (typical macOS scenario)
+      const files = [
+        'DJI_0001.MOV',
+        '._DJI_0001.MOV',  // Resource fork
+        'DJI_0002.JPG',
+        '._DJI_0002.JPG',  // Resource fork
+        'DJI_0003.DNG',
+        '._DJI_0003.DNG'   // Resource fork
+      ];
+
+      for (const filename of files) {
+        const content = filename.startsWith('._') ? 'resource fork data' : 'actual file content';
+        await fs.writeFile(join(dcimDir, filename), content);
+      }
+
+      // Scan files (should exclude resource forks)
+      const scannedFiles = await scanFiles(sourceDir, ['.mov', '.jpg', '.dng'], [], []);
+
+      // Should only find 3 actual files, not the 3 resource forks
+      expect(scannedFiles).toHaveLength(3);
+      expect(scannedFiles.every(f => !f.includes('/._'))).toBe(true);
+      expect(scannedFiles.some(f => f.includes('DJI_0001.MOV'))).toBe(true);
+      expect(scannedFiles.some(f => f.includes('DJI_0002.JPG'))).toBe(true);
+      expect(scannedFiles.some(f => f.includes('DJI_0003.DNG'))).toBe(true);
+    });
+  });
+
+  describe('Cross-Device Move Integration', () => {
+    it('should handle cross-device moves gracefully', async () => {
+      // Create test file
+      const testDir = join(sourceDir, 'DCIM');
+      await fs.mkdir(testDir, { recursive: true });
+      
+      const testFile = join(testDir, 'cross_device_test.jpg');
+      const originalContent = 'content for cross device test';
+      await fs.writeFile(testFile, originalContent);
+
+      // Mock fs.rename to simulate cross-device scenario
+      const originalRename = fs.rename;
+      const mockRename = async (src, dest) => {
+        const error = new Error('cross-device link not permitted');
+        error.code = 'EXDEV';
+        throw error;
+      };
+
+      fs.rename = mockRename;
+
+      try {
+        const date = await extractFileDate(testFile, false);
+        const { targetDir, baseFilename } = generateTargetPath(date, 'TestCam', testFile, destDir);
+        
+        // Should succeed with copy-then-delete fallback
+        const resultPath = await processFile(testFile, targetDir, baseFilename, false);
+
+        // Verify move completed (source gone, target exists)
+        expect(fs.access(testFile)).rejects.toThrow();
+        expect(await fs.readFile(resultPath, 'utf-8')).toBe(originalContent);
+      } finally {
+        // Restore original fs.rename
+        fs.rename = originalRename;
+      }
+    });
+  });
 });

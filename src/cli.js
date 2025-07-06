@@ -43,6 +43,7 @@ export async function main() {
       if (args.source) finalProfile.sourcePath = args.source;
       if (args.destination) finalProfile.destinationRoot = args.destination;
       if (args.camera) finalProfile.cameraLabel = args.camera;
+      if (args.onCollision) finalProfile.onCollision = args.onCollision;
     } else {
       finalProfile = await promptOverrides(selectedProfile);
     }
@@ -76,6 +77,8 @@ function parseArgs() {
       parsed.destination = args[++i];
     } else if (arg === '--camera' || arg === '-c') {
       parsed.camera = args[++i];
+    } else if (arg === '--on-collision') {
+      parsed.onCollision = args[++i];
     }
   }
   
@@ -95,6 +98,7 @@ Options:
   -s, --source <path>     Override source path
   -d, --destination <path> Override destination path
   -c, --camera <label>    Override camera label
+  --on-collision <action> File collision handling: 'rename' or 'replace'
   --headless              Run without interactive prompts
 
 Examples:
@@ -102,6 +106,7 @@ Examples:
   cardingest -p dji-drone             # Use specific profile
   cardingest -p dji-drone --headless  # Headless mode
   cardingest -p dji-drone -s /Volumes/SD_CARD --headless
+  cardingest -p dji-drone --on-collision replace --headless
 
 Profiles are stored in ~/.cardingest/profiles/
 `);
@@ -163,16 +168,30 @@ async function createProfile() {
       validate: label => label.length > 0 || 'Camera label is required'
     },
     {
-      type: 'confirm',
-      name: 'copyFiles',
-      message: 'Copy files (vs move)?',
-      initial: true
+      type: 'select',
+      name: 'transferMode',
+      message: 'File transfer mode:',
+      choices: [
+        { title: 'Copy (preserve originals)', value: 'copy' },
+        { title: 'Move (remove from source)', value: 'move' }
+      ],
+      initial: 0
     },
     {
       type: 'confirm',
       name: 'useExifDate',
       message: 'Use EXIF date when available?',
       initial: true
+    },
+    {
+      type: 'select',
+      name: 'onCollision',
+      message: 'File collision handling:',
+      choices: [
+        { title: 'Rename (add suffix)', value: 'rename' },
+        { title: 'Replace existing file', value: 'replace' }
+      ],
+      initial: 0
     }
   ];
   
@@ -256,9 +275,15 @@ async function runImport(profile, headless = false) {
     try {
       const date = await extractFileDate(file, profile.useExifDate);
       const { targetDir, baseFilename } = generateTargetPath(date, profile.cameraLabel, file, profile.destinationRoot);
-      const finalFilename = await findAvailableFilename(targetDir, baseFilename);
       
-      await processFile(file, targetDir, finalFilename, profile.copyFiles);
+      let finalFilename;
+      if (profile.onCollision === 'replace') {
+        finalFilename = baseFilename;
+      } else {
+        finalFilename = await findAvailableFilename(targetDir, baseFilename);
+      }
+      
+      await processFile(file, targetDir, finalFilename, profile.transferMode === 'copy');
       
       processed++;
       
@@ -274,5 +299,5 @@ async function runImport(profile, headless = false) {
   console.log(`\\nImport completed:`);
   console.log(`- Files processed: ${processed}`);
   console.log(`- Errors: ${errors}`);
-  console.log(`- Operation: ${profile.copyFiles ? 'Copy' : 'Move'}`);
+  console.log(`- Operation: ${profile.transferMode === 'copy' ? 'Copy' : 'Move'}`);
 }

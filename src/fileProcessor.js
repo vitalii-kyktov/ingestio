@@ -19,6 +19,11 @@ export async function scanFiles(sourcePath, includeExtensions, excludeExtensions
         } else if (entry.isFile()) {
           const ext = extname(entry.name).toLowerCase();
           
+          // Skip macOS resource fork files
+          if (entry.name.startsWith('._')) {
+            continue;
+          }
+          
           if (includeExtensions.includes(ext) && !excludeExtensions.includes(ext)) {
             files.push(fullPath);
           }
@@ -132,7 +137,18 @@ export async function processFile(sourcePath, targetDir, filename, copyFiles) {
   if (copyFiles) {
     await fs.copyFile(sourcePath, targetPath);
   } else {
-    await fs.rename(sourcePath, targetPath);
+    try {
+      // Try rename first (faster for same filesystem)
+      await fs.rename(sourcePath, targetPath);
+    } catch (error) {
+      if (error.code === 'EXDEV') {
+        // Cross-device move: copy then delete
+        await fs.copyFile(sourcePath, targetPath);
+        await fs.unlink(sourcePath);
+      } else {
+        throw error;
+      }
+    }
   }
   
   return targetPath;

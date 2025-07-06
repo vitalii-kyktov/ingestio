@@ -52,6 +52,31 @@ describe('fileProcessor.js', () => {
       expect(files).not.toContain(join(testDir, 'excluded', 'image4.jpg'));
     });
 
+    it('should skip macOS resource fork files', async () => {
+      const testDir = join(tempDir, 'test-source');
+      await fs.mkdir(testDir, { recursive: true });
+
+      // Create test files including resource forks
+      await fs.writeFile(join(testDir, 'image1.jpg'), 'test');
+      await fs.writeFile(join(testDir, '._image1.jpg'), 'resource fork');
+      await fs.writeFile(join(testDir, 'video.mp4'), 'test');
+      await fs.writeFile(join(testDir, '._video.mp4'), 'resource fork');
+      await fs.writeFile(join(testDir, '._hidden_file.txt'), 'resource fork');
+
+      const includeExtensions = ['.jpg', '.mp4', '.txt'];
+      const excludeExtensions = [];
+      const excludeFolders = [];
+
+      const files = await scanFiles(testDir, includeExtensions, excludeExtensions, excludeFolders);
+
+      expect(files).toHaveLength(2);
+      expect(files).toContain(join(testDir, 'image1.jpg'));
+      expect(files).toContain(join(testDir, 'video.mp4'));
+      expect(files).not.toContain(join(testDir, '._image1.jpg'));
+      expect(files).not.toContain(join(testDir, '._video.mp4'));
+      expect(files).not.toContain(join(testDir, '._hidden_file.txt'));
+    });
+
     it('should handle empty directories', async () => {
       const testDir = join(tempDir, 'empty-source');
       await fs.mkdir(testDir, { recursive: true });
@@ -290,6 +315,98 @@ describe('fileProcessor.js', () => {
       // Verify target directory was created
       const stats = await fs.stat(targetDir);
       expect(stats.isDirectory()).toBe(true);
+    });
+
+    it('should handle cross-device move with copy-then-delete fallback', async () => {
+      const sourceDir = join(tempDir, 'source');
+      const targetDir = join(tempDir, 'target');
+      await fs.mkdir(sourceDir, { recursive: true });
+      
+      const sourcePath = join(sourceDir, 'test.jpg');
+      await fs.writeFile(sourcePath, 'test content');
+
+      // Mock fs.rename to simulate EXDEV error (cross-device link)
+      const originalRename = fs.rename;
+      const mockRename = async (src, dest) => {
+        const error = new Error('cross-device link not permitted');
+        error.code = 'EXDEV';
+        throw error;
+      };
+
+      // Temporarily replace fs.rename
+      fs.rename = mockRename;
+
+      try {
+        const targetPath = await processFile(sourcePath, targetDir, 'moved.jpg', false);
+
+        expect(targetPath).toBe(join(targetDir, 'moved.jpg'));
+        
+        // Source should not exist (deleted after copy), target should exist
+        expect(fs.access(sourcePath)).rejects.toThrow();
+        expect(await fs.readFile(targetPath, 'utf-8')).toBe('test content');
+      } finally {
+        // Restore original fs.rename
+        fs.rename = originalRename;
+      }
+    });
+
+    it('should preserve original rename behavior for same-device moves', async () => {
+      const sourceDir = join(tempDir, 'source');
+      const targetDir = join(tempDir, 'target');
+      await fs.mkdir(sourceDir, { recursive: true });
+      
+      const sourcePath = join(sourceDir, 'test.jpg');
+      await fs.writeFile(sourcePath, 'test content');
+
+      // Track if rename was called
+      let renameCalled = false;
+      const originalRename = fs.rename;
+      const trackingRename = async (src, dest) => {
+        renameCalled = true;
+        return originalRename(src, dest);
+      };
+
+      fs.rename = trackingRename;
+
+      try {
+        const targetPath = await processFile(sourcePath, targetDir, 'moved.jpg', false);
+
+        expect(targetPath).toBe(join(targetDir, 'moved.jpg'));
+        expect(renameCalled).toBe(true);
+        
+        // Source should not exist, target should exist
+        expect(fs.access(sourcePath)).rejects.toThrow();
+        expect(await fs.readFile(targetPath, 'utf-8')).toBe('test content');
+      } finally {
+        // Restore original fs.rename
+        fs.rename = originalRename;
+      }
+    });
+
+    it('should propagate non-EXDEV errors during move operations', async () => {
+      const sourceDir = join(tempDir, 'source');
+      const targetDir = join(tempDir, 'target');
+      await fs.mkdir(sourceDir, { recursive: true });
+      
+      const sourcePath = join(sourceDir, 'test.jpg');
+      await fs.writeFile(sourcePath, 'test content');
+
+      // Mock fs.rename to simulate a different error (not EXDEV)
+      const originalRename = fs.rename;
+      const mockRename = async (src, dest) => {
+        const error = new Error('permission denied');
+        error.code = 'EACCES';
+        throw error;
+      };
+
+      fs.rename = mockRename;
+
+      try {
+        await expect(processFile(sourcePath, targetDir, 'moved.jpg', false)).rejects.toThrow('permission denied');
+      } finally {
+        // Restore original fs.rename
+        fs.rename = originalRename;
+      }
     });
   });
 });

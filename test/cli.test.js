@@ -160,5 +160,52 @@ describe('cli.js', () => {
       
       expect(Object.keys(parsed)).toHaveLength(0);
     });
+
+    it('should parse on-collision flag', () => {
+      process.argv = ['node', 'script.js', '--on-collision', 'replace'];
+      
+      const args = process.argv.slice(2);
+      const parsed = {};
+      
+      for (let i = 0; i < args.length; i++) {
+        const arg = args[i];
+        if (arg === '--on-collision') {
+          parsed.onCollision = args[++i];
+        }
+      }
+      
+      expect(parsed.onCollision).toBe('replace');
+    });
+
+    it('should parse all flags including new ones', () => {
+      process.argv = ['node', 'script.js', '--profile', 'test', '--on-collision', 'rename', '--headless'];
+      
+      const args = process.argv.slice(2);
+      const parsed = {};
+      
+      for (let i = 0; i < args.length; i++) {
+        const arg = args[i];
+        
+        if (arg === '--help' || arg === '-h') {
+          parsed.help = true;
+        } else if (arg === '--headless') {
+          parsed.headless = true;
+        } else if (arg === '--profile' || arg === '-p') {
+          parsed.profile = args[++i];
+        } else if (arg === '--source' || arg === '-s') {
+          parsed.source = args[++i];
+        } else if (arg === '--destination' || arg === '-d') {
+          parsed.destination = args[++i];
+        } else if (arg === '--camera' || arg === '-c') {
+          parsed.camera = args[++i];
+        } else if (arg === '--on-collision') {
+          parsed.onCollision = args[++i];
+        }
+      }
+      
+      expect(parsed.profile).toBe('test');
+      expect(parsed.onCollision).toBe('rename');
+      expect(parsed.headless).toBe(true);
+    });
   });
 });

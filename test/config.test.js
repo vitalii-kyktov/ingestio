@@ -36,8 +36,9 @@ describe('config.js', () => {
       expect(result.sourcePath).toBe('/test/source');
       expect(result.destinationRoot).toBe('/test/destination');
       expect(result.cameraLabel).toBe('TestCamera');
-      expect(result.copyFiles).toBe(true); // default value
+      expect(result.transferMode).toBe('copy'); // default value
       expect(result.useExifDate).toBe(true); // default value
+      expect(result.onCollision).toBe('rename'); // default value
     });
 
     it('should apply default values for optional fields', () => {
@@ -45,14 +46,16 @@ describe('config.js', () => {
         sourcePath: '/test/source',
         destinationRoot: '/test/destination',
         cameraLabel: 'TestCamera',
-        copyFiles: false,
-        useExifDate: false
+        transferMode: 'move',
+        useExifDate: false,
+        onCollision: 'replace'
       };
 
       const result = validateProfile(profile);
       
-      expect(result.copyFiles).toBe(false);
+      expect(result.transferMode).toBe('move');
       expect(result.useExifDate).toBe(false);
+      expect(result.onCollision).toBe('replace');
       expect(result.includeExtensions).toEqual(['.jpg', '.jpeg', '.raw', '.cr2', '.nef', '.arw', '.dng', '.mp4', '.mov', '.avi']);
     });
 
@@ -80,6 +83,137 @@ describe('config.js', () => {
       expect(result.includeExtensions).toEqual(['.jpg', '.png']);
       expect(result.excludeExtensions).toEqual(['.tmp']);
       expect(result.excludeFolders).toEqual(['thumbnails']);
+    });
+
+    describe('transferMode validation', () => {
+      it('should accept valid transferMode values', () => {
+        const profileCopy = {
+          sourcePath: '/test/source',
+          destinationRoot: '/test/destination',
+          cameraLabel: 'TestCamera',
+          transferMode: 'copy'
+        };
+
+        const profileMove = {
+          sourcePath: '/test/source',
+          destinationRoot: '/test/destination',
+          cameraLabel: 'TestCamera',
+          transferMode: 'move'
+        };
+
+        const resultCopy = validateProfile(profileCopy);
+        const resultMove = validateProfile(profileMove);
+        
+        expect(resultCopy.transferMode).toBe('copy');
+        expect(resultMove.transferMode).toBe('move');
+      });
+
+      it('should throw error for invalid transferMode values', () => {
+        const profile = {
+          sourcePath: '/test/source',
+          destinationRoot: '/test/destination',
+          cameraLabel: 'TestCamera',
+          transferMode: 'invalid'
+        };
+
+        expect(() => validateProfile(profile)).toThrow('Invalid transferMode value: invalid. Must be \'copy\' or \'move\'');
+      });
+
+      it('should default to copy when transferMode is not specified', () => {
+        const profile = {
+          sourcePath: '/test/source',
+          destinationRoot: '/test/destination',
+          cameraLabel: 'TestCamera'
+        };
+
+        const result = validateProfile(profile);
+        expect(result.transferMode).toBe('copy');
+      });
+    });
+
+    describe('backward compatibility with copyFiles', () => {
+      it('should convert copyFiles: true to transferMode: copy', () => {
+        const profile = {
+          sourcePath: '/test/source',
+          destinationRoot: '/test/destination',
+          cameraLabel: 'TestCamera',
+          copyFiles: true
+        };
+
+        const result = validateProfile(profile);
+        expect(result.transferMode).toBe('copy');
+      });
+
+      it('should convert copyFiles: false to transferMode: move', () => {
+        const profile = {
+          sourcePath: '/test/source',
+          destinationRoot: '/test/destination',
+          cameraLabel: 'TestCamera',
+          copyFiles: false
+        };
+
+        const result = validateProfile(profile);
+        expect(result.transferMode).toBe('move');
+      });
+
+      it('should prefer transferMode over copyFiles when both are present', () => {
+        const profile = {
+          sourcePath: '/test/source',
+          destinationRoot: '/test/destination',
+          cameraLabel: 'TestCamera',
+          copyFiles: false,
+          transferMode: 'copy'
+        };
+
+        const result = validateProfile(profile);
+        expect(result.transferMode).toBe('copy');
+      });
+    });
+
+    describe('onCollision validation', () => {
+      it('should accept valid onCollision values', () => {
+        const profileRename = {
+          sourcePath: '/test/source',
+          destinationRoot: '/test/destination',
+          cameraLabel: 'TestCamera',
+          onCollision: 'rename'
+        };
+
+        const profileReplace = {
+          sourcePath: '/test/source',
+          destinationRoot: '/test/destination',
+          cameraLabel: 'TestCamera',
+          onCollision: 'replace'
+        };
+
+        const resultRename = validateProfile(profileRename);
+        const resultReplace = validateProfile(profileReplace);
+        
+        expect(resultRename.onCollision).toBe('rename');
+        expect(resultReplace.onCollision).toBe('replace');
+      });
+
+      it('should throw error for invalid onCollision values', () => {
+        const profile = {
+          sourcePath: '/test/source',
+          destinationRoot: '/test/destination',
+          cameraLabel: 'TestCamera',
+          onCollision: 'invalid'
+        };
+
+        expect(() => validateProfile(profile)).toThrow('Invalid onCollision value: invalid. Must be \'rename\' or \'replace\'');
+      });
+
+      it('should default to rename when onCollision is not specified', () => {
+        const profile = {
+          sourcePath: '/test/source',
+          destinationRoot: '/test/destination',
+          cameraLabel: 'TestCamera'
+        };
+
+        const result = validateProfile(profile);
+        expect(result.onCollision).toBe('rename');
+      });
     });
   });
 
