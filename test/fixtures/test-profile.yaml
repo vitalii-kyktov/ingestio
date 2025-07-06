@@ -1,0 +1,12 @@
+sourcePath: /test/source
+destinationRoot: /test/destination
+cameraLabel: TestCamera
+includeExtensions:
+  - .jpg
+  - .mp4
+excludeExtensions:
+  - .tmp
+excludeFolders:
+  - thumbnails
+copyFiles: true
+useExifDate: true

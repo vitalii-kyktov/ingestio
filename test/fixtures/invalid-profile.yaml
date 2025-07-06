@@ -1,0 +1,4 @@
+sourcePath: /test/source
+# Missing required fields: destinationRoot, cameraLabel
+includeExtensions:
+  - .jpg

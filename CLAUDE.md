@@ -18,6 +18,12 @@ bun start
 # Run in development mode with file watching
 bun run dev
 
+# Run tests
+bun test
+
+# Run tests in watch mode
+bun test --watch
+
 # Test specific functionality
 bun start --help
 bun start --profile dji-drone --headless
@@ -79,9 +85,24 @@ Sample profiles are included for common camera types (DJI, Canon R5, GoPro).
 
 Files are organized as `YYYY-MM-DD/HH_MM_SS_CameraLabel.ext` where date comes from EXIF `DateTimeOriginal` or file modification time as fallback.
 
+## Testing
+
+The project uses Bun's built-in testing framework. Tests are located in the `test/` directory and cover:
+
+- **config.test.js**: Profile validation and loading logic
+- **fileProcessor.test.js**: File scanning, date extraction, and file operations
+- **cli.test.js**: Command-line argument parsing
+- **dng-exif-regression.test.js**: DNG EXIF extraction scenarios and timezone handling
+- **integration.test.js**: End-to-end workflow testing with mixed file types
+
+Tests use temporary directories for file operations and mock data to avoid side effects. Each test module handles its own setup/teardown. Special attention is paid to testing the EXIF fallback mechanisms that handle problematic file formats like DNG files from certain cameras.
+
 ## Dependencies
 
 - **Bun**: Runtime and package manager
 - **prompts**: Interactive CLI prompts
 - **yaml**: YAML configuration parsing
 - **exifr**: EXIF metadata extraction
+
+## Other
+- After facing and resolving challenges, document the problem, cause, and solution in MD documents in the dev-logs directory. Each challenge should have a dedicated file

@@ -44,7 +44,46 @@ export async function extractFileDate(filePath, useExifDate) {
         return new Date(exifData.DateTime);
       }
     } catch (error) {
-      // Fallback to file mtime if EXIF fails
+      // Fallback to exiftool for DNG files or other files that exifr can't handle
+    }
+    
+    // Try exiftool as fallback, especially useful for DNG files
+    try {
+      const { spawn } = await import('child_process');
+      const { promisify } = await import('util');
+      
+      const result = await new Promise((resolve, reject) => {
+        const process = spawn('exiftool', ['-DateTimeOriginal', '-s3', filePath]);
+        let output = '';
+        let error = '';
+        
+        process.stdout.on('data', (data) => {
+          output += data.toString();
+        });
+        
+        process.stderr.on('data', (data) => {
+          error += data.toString();
+        });
+        
+        process.on('close', (code) => {
+          if (code === 0 && output.trim()) {
+            resolve(output.trim());
+          } else {
+            reject(new Error(error || 'exiftool failed'));
+          }
+        });
+      });
+      
+      if (result) {
+        // Parse exiftool date format: "YYYY:MM:DD HH:MM:SS"
+        const dateStr = result.replace(/(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3');
+        const date = new Date(dateStr);
+        if (!isNaN(date.getTime())) {
+          return date;
+        }
+      }
+    } catch (error) {
+      // Fallback to file mtime if both exifr and exiftool fail
     }
   }
   
