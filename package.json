@@ -1,0 +1,25 @@
+{
+  "name": "cardingest",
+  "version": "1.0.0",
+  "description": "Intelligent CLI tool for importing raw media from SD cards into structured local footage libraries",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "cardingest": "./src/index.js"
+  },
+  "scripts": {
+    "start": "bun run src/index.js",
+    "dev": "bun run --watch src/index.js"
+  },
+  "keywords": ["media", "import", "cli", "footage", "photography"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "prompts": "^2.4.2",
+    "yaml": "^2.4.5",
+    "exifr": "^7.1.3"
+  },
+  "devDependencies": {
+    "@types/prompts": "^2.4.9"
+  }
+}
