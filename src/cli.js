@@ -1,6 +1,7 @@
 import prompts from 'prompts';
 import { loadProfiles, validateProfile, saveProfile } from './config.js';
 import { scanFiles, extractFileDate, generateTargetPath, findAvailableFilename, processFile } from './fileProcessor.js';
+import Logger from './logger.js';
 
 export async function main() {
   try {
@@ -44,13 +45,18 @@ export async function main() {
       if (args.destination) finalProfile.destinationRoot = args.destination;
       if (args.camera) finalProfile.cameraLabel = args.camera;
       if (args.onCollision) finalProfile.onCollision = args.onCollision;
+      if (args.logLevel) finalProfile.logLevel = args.logLevel;
     } else {
       finalProfile = await promptOverrides(selectedProfile);
     }
     
     const validatedProfile = validateProfile(finalProfile);
     
-    await runImport(validatedProfile, args.headless);
+    // Create logger instance
+    const reportFile = args.report === true ? null : args.report;
+    const logger = new Logger(validatedProfile.logLevel, reportFile);
+    
+    await runImport(validatedProfile, args.headless, logger);
     
   } catch (error) {
     console.error('Error:', error.message);
@@ -79,6 +85,10 @@ function parseArgs() {
       parsed.camera = args[++i];
     } else if (arg === '--on-collision') {
       parsed.onCollision = args[++i];
+    } else if (arg === '--log-level' || arg === '-l') {
+      parsed.logLevel = args[++i];
+    } else if (arg === '--report' || arg === '-r') {
+      parsed.report = args[++i] || true;
     }
   }
   
@@ -99,6 +109,8 @@ Options:
   -d, --destination <path> Override destination path
   -c, --camera <label>    Override camera label
   --on-collision <action> File collision handling: 'rename' or 'replace'
+  -l, --log-level <level> Set log level: 'debug', 'info', 'warn', 'error'
+  -r, --report [filename] Generate import report (optional filename)
   --headless              Run without interactive prompts
 
 Examples:
@@ -107,6 +119,7 @@ Examples:
   cardingest -p dji-drone --headless  # Headless mode
   cardingest -p dji-drone -s /Volumes/SD_CARD --headless
   cardingest -p dji-drone --on-collision replace --headless
+  cardingest -p dji-drone --log-level debug --report my-import.txt
 
 Profiles are stored in ~/.cardingest/profiles/
 `);
@@ -192,6 +205,18 @@ async function createProfile() {
         { title: 'Replace existing file', value: 'replace' }
       ],
       initial: 0
+    },
+    {
+      type: 'select',
+      name: 'logLevel',
+      message: 'Log level:',
+      choices: [
+        { title: 'Info (default)', value: 'info' },
+        { title: 'Debug (verbose)', value: 'debug' },
+        { title: 'Warn (warnings only)', value: 'warn' },
+        { title: 'Error (errors only)', value: 'error' }
+      ],
+      initial: 0
     }
   ];
   
@@ -233,11 +258,17 @@ async function promptOverrides(profile) {
   return { ...profile, ...overrides };
 }
 
-async function runImport(profile, headless = false) {
-  console.log('Starting import with profile:', profile.name || 'Custom');
-  console.log('Source:', profile.sourcePath);
-  console.log('Destination:', profile.destinationRoot);
-  console.log('Camera:', profile.cameraLabel);
+async function runImport(profile, headless = false, logger) {
+  logger.setProfile(profile);
+  
+  logger.info('Starting import with profile:', { 
+    name: profile.name || 'Custom',
+    source: profile.sourcePath,
+    destination: profile.destinationRoot,
+    camera: profile.cameraLabel,
+    transferMode: profile.transferMode,
+    logLevel: profile.logLevel
+  });
   
   if (!headless) {
     const confirm = await prompts({
@@ -248,12 +279,12 @@ async function runImport(profile, headless = false) {
     });
     
     if (!confirm.proceed) {
-      console.log('Import cancelled.');
+      logger.info('Import cancelled by user');
       return;
     }
   }
   
-  console.log('Scanning files...');
+  logger.info('Scanning files...');
   const files = await scanFiles(
     profile.sourcePath,
     profile.includeExtensions,
@@ -262,16 +293,31 @@ async function runImport(profile, headless = false) {
   );
   
   if (files.length === 0) {
-    console.log('No files found to import.');
+    logger.info('No files found to import');
     return;
   }
   
-  console.log(`Found ${files.length} files to import.`);
+  logger.info(`Found ${files.length} files to import`);
+  logger.startFileProcessing(files.length);
+  
+  // Calculate total size for progress tracking
+  let totalSize = 0;
+  for (const file of files) {
+    try {
+      const stats = await import('fs').then(fs => fs.promises.stat(file));
+      totalSize += stats.size;
+    } catch (error) {
+      logger.warn(`Could not get file size for ${file}`, { error: error.message });
+    }
+  }
+  logger.updateTotalSize(totalSize);
   
   let processed = 0;
   let errors = 0;
   
   for (const file of files) {
+    const startTime = Date.now();
+    
     try {
       const date = await extractFileDate(file, profile.useExifDate);
       const { targetDir, baseFilename } = generateTargetPath(date, profile.cameraLabel, file, profile.destinationRoot);
@@ -283,21 +329,53 @@ async function runImport(profile, headless = false) {
         finalFilename = await findAvailableFilename(targetDir, baseFilename);
       }
       
-      await processFile(file, targetDir, finalFilename, profile.transferMode === 'copy');
+      const targetPath = await processFile(file, targetDir, finalFilename, profile.transferMode === 'copy');
+      
+      // Get file size and duration for logging
+      const stats = await import('fs').then(fs => fs.promises.stat(targetPath));
+      const duration = Date.now() - startTime;
+      
+      logger.logFileTransfer(
+        file,
+        targetPath,
+        profile.transferMode,
+        stats.size,
+        duration,
+        true
+      );
       
       processed++;
       
       if (processed % 10 === 0 || processed === files.length) {
-        console.log(`Progress: ${processed}/${files.length} files processed`);
+        logger.info(`Progress: ${processed}/${files.length} files processed`);
       }
     } catch (error) {
-      console.error(`Error processing ${file}:`, error.message);
+      const duration = Date.now() - startTime;
+      logger.error(`Error processing ${file}`, { error: error.message, duration });
       errors++;
     }
   }
   
-  console.log(`\\nImport completed:`);
-  console.log(`- Files processed: ${processed}`);
-  console.log(`- Errors: ${errors}`);
-  console.log(`- Operation: ${profile.transferMode === 'copy' ? 'Copy' : 'Move'}`);
+  logger.info('Import completed', {
+    processed,
+    errors,
+    operation: profile.transferMode,
+    totalSize: logger.formatBytes(totalSize)
+  });
+  
+  // Generate and save report
+  const report = await logger.generateReport();
+  
+  if (logger.level === 'info' || logger.level === 'debug') {
+    console.log('\n' + '='.repeat(50));
+    console.log('IMPORT SUMMARY');
+    console.log('='.repeat(50));
+    console.log(`Files processed: ${processed}`);
+    console.log(`Errors: ${errors}`);
+    console.log(`Operation: ${profile.transferMode === 'copy' ? 'Copy' : 'Move'}`);
+    console.log(`Total size: ${logger.formatBytes(totalSize)}`);
+    if (logger.reportFile) {
+      console.log(`Report saved to: ~/.cardingest/reports/${logger.reportFile}`);
+    }
+  }
 }

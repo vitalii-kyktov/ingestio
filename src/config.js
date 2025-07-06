@@ -60,6 +60,11 @@ export function validateProfile(profile) {
     throw new Error(`Invalid transferMode value: ${profile.transferMode}. Must be 'copy' or 'move'`);
   }
   
+  // Validate log level option
+  if (profile.logLevel && !['debug', 'info', 'warn', 'error'].includes(profile.logLevel)) {
+    throw new Error(`Invalid logLevel value: ${profile.logLevel}. Must be 'debug', 'info', 'warn', or 'error'`);
+  }
+  
   // Handle backward compatibility for copyFiles
   let transferMode = profile.transferMode;
   if (!transferMode && profile.copyFiles !== undefined) {
@@ -79,6 +84,7 @@ export function validateProfile(profile) {
     transferMode: transferMode,
     useExifDate: profile.useExifDate !== false, // default to true
     onCollision: profile.onCollision || 'rename', // default to rename
+    logLevel: profile.logLevel || 'info', // default to info
   };
 }
 

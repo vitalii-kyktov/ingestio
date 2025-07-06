@@ -30,6 +30,7 @@ export async function scanFiles(sourcePath, includeExtensions, excludeExtensions
         }
       }
     } catch (error) {
+      // Use console.warn for backward compatibility, but logger will be used from CLI
       console.warn(`Warning: Could not scan directory ${dir}: ${error.message}`);
     }
   }
