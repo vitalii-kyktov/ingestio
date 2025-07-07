@@ -64,7 +64,8 @@ describe('Integration Tests', () => {
       const excludeExtensions = [];
       const excludeFolders = [];
 
-      const foundFiles = await scanFiles(sourceDir, includeExtensions, excludeExtensions, excludeFolders);
+      const foundFileGroups = await scanFiles(sourceDir, includeExtensions, excludeExtensions, excludeFolders, false, [], []);
+      const foundFiles = foundFileGroups.flatMap(group => group.files);
       expect(foundFiles).toHaveLength(4);
 
       // Test date extraction and path generation for each file
@@ -147,8 +148,9 @@ describe('Integration Tests', () => {
       const excludeExtensions = [];
       const excludeFolders = ['thumbnails', '.Trashes'];
 
-      // Step 1: Scan files
-      const foundFiles = await scanFiles(sourceDir, includeExtensions, excludeExtensions, excludeFolders);
+      // Step 1: Scan files (using old behavior for this test)
+      const foundFileGroups = await scanFiles(sourceDir, includeExtensions, excludeExtensions, excludeFolders, false, [], []);
+      const foundFiles = foundFileGroups.flatMap(group => group.files);
       
       // Should find only the DCIM files, excluding thumbnails and .Trashes
       expect(foundFiles).toHaveLength(3);
@@ -177,7 +179,8 @@ describe('Integration Tests', () => {
       expect(errorCount).toBe(0);
 
       // Check that files were created in the destination
-      const createdFiles = await scanFiles(destDir, ['.jpg', '.dng'], [], []);
+      const createdFileGroups = await scanFiles(destDir, ['.jpg', '.dng'], [], [], false, [], []);
+      const createdFiles = createdFileGroups.flatMap(group => group.files);
       expect(createdFiles).toHaveLength(3);
 
       // Verify directory structure
@@ -223,8 +226,8 @@ describe('Integration Tests', () => {
       await fs.writeFile(testFile, originalContent);
 
       // Simulate copy mode processing
-      const files = await scanFiles(sourceDir, ['.jpg'], [], []);
-      expect(files).toHaveLength(1);
+      const fileGroups = await scanFiles(sourceDir, ['.jpg'], [], [], false, [], []);
+      expect(fileGroups).toHaveLength(1);
 
       const date = await extractFileDate(testFile, false);
       const { targetDir, baseFilename } = generateTargetPath(date, 'TestCam', testFile, destDir);
@@ -248,8 +251,8 @@ describe('Integration Tests', () => {
       await fs.writeFile(testFile, originalContent);
 
       // Simulate move mode processing
-      const files = await scanFiles(sourceDir, ['.jpg'], [], []);
-      expect(files).toHaveLength(1);
+      const fileGroups = await scanFiles(sourceDir, ['.jpg'], [], [], false, [], []);
+      expect(fileGroups).toHaveLength(1);
 
       const date = await extractFileDate(testFile, false);
       const { targetDir, baseFilename } = generateTargetPath(date, 'TestCam', testFile, destDir);
@@ -350,7 +353,8 @@ describe('Integration Tests', () => {
       }
 
       // Scan files (should exclude resource forks)
-      const scannedFiles = await scanFiles(sourceDir, ['.mov', '.jpg', '.dng'], [], []);
+      const scannedFileGroups = await scanFiles(sourceDir, ['.mov', '.jpg', '.dng'], [], [], false, [], []);
+      const scannedFiles = scannedFileGroups.flatMap(group => group.files);
 
       // Should only find 3 actual files, not the 3 resource forks
       expect(scannedFiles).toHaveLength(3);

@@ -1,6 +1,6 @@
 import prompts from 'prompts';
 import { loadProfiles, validateProfile, saveProfile } from './config.js';
-import { scanFiles, extractFileDate, generateTargetPath, findAvailableFilename, processFile } from './fileProcessor.js';
+import { scanFiles, extractFileDate, generateTargetPath, findAvailableFilename, processFile, processFileGroup } from './fileProcessor.js';
 import Logger from './logger.js';
 
 export async function main() {
@@ -285,29 +285,42 @@ async function runImport(profile, headless = false, logger) {
   }
   
   logger.info('Scanning files...');
-  const files = await scanFiles(
+  const fileGroups = await scanFiles(
     profile.sourcePath,
     profile.includeExtensions,
     profile.excludeExtensions,
-    profile.excludeFolders
+    profile.excludeFolders,
+    profile.maintainFileRelationships,
+    profile.primaryExtensions,
+    profile.companionExtensions
   );
   
-  if (files.length === 0) {
+  if (fileGroups.length === 0) {
     logger.info('No files found to import');
     return;
   }
   
-  logger.info(`Found ${files.length} files to import`);
-  logger.startFileProcessing(files.length);
+  // Count total files across all groups
+  const totalFiles = fileGroups.reduce((total, group) => total + group.files.length, 0);
+  
+  if (profile.maintainFileRelationships) {
+    logger.info(`Found ${totalFiles} files in ${fileGroups.length} groups to import`);
+  } else {
+    logger.info(`Found ${totalFiles} files to import`);
+  }
+  
+  logger.startFileProcessing(totalFiles);
   
   // Calculate total size for progress tracking
   let totalSize = 0;
-  for (const file of files) {
-    try {
-      const stats = await import('fs').then(fs => fs.promises.stat(file));
-      totalSize += stats.size;
-    } catch (error) {
-      logger.warn(`Could not get file size for ${file}`, { error: error.message });
+  for (const group of fileGroups) {
+    for (const file of group.files) {
+      try {
+        const stats = await import('fs').then(fs => fs.promises.stat(file));
+        totalSize += stats.size;
+      } catch (error) {
+        logger.warn(`Could not get file size for ${file}`, { error: error.message });
+      }
     }
   }
   logger.updateTotalSize(totalSize);
@@ -315,44 +328,49 @@ async function runImport(profile, headless = false, logger) {
   let processed = 0;
   let errors = 0;
   
-  for (const file of files) {
+  for (const group of fileGroups) {
     const startTime = Date.now();
     
     try {
-      const date = await extractFileDate(file, profile.useExifDate);
-      const { targetDir, baseFilename } = generateTargetPath(date, profile.cameraLabel, file, profile.destinationRoot);
+      // Extract date from primary file
+      const date = await extractFileDate(group.primaryFile, profile.useExifDate);
       
-      let finalFilename;
-      if (profile.onCollision === 'replace') {
-        finalFilename = baseFilename;
-      } else {
-        finalFilename = await findAvailableFilename(targetDir, baseFilename);
-      }
-      
-      const targetPath = await processFile(file, targetDir, finalFilename, profile.transferMode === 'copy');
-      
-      // Get file size and duration for logging
-      const stats = await import('fs').then(fs => fs.promises.stat(targetPath));
-      const duration = Date.now() - startTime;
-      
-      logger.logFileTransfer(
-        file,
-        targetPath,
-        profile.transferMode,
-        stats.size,
-        duration,
-        true
+      // Process the entire group with consistent naming
+      const results = await processFileGroup(
+        group,
+        date,
+        profile.cameraLabel,
+        profile.destinationRoot,
+        profile.onCollision,
+        profile.transferMode
       );
       
-      processed++;
+      // Log each file transfer in the group
+      for (const result of results) {
+        const stats = await import('fs').then(fs => fs.promises.stat(result.targetPath));
+        const duration = Date.now() - startTime;
+        
+        logger.logFileTransfer(
+          result.sourcePath,
+          result.targetPath,
+          profile.transferMode,
+          stats.size,
+          duration,
+          true,
+          result.isCompanion
+        );
+        
+        processed++;
+      }
       
-      if (processed % 10 === 0 || processed === files.length) {
-        logger.info(`Progress: ${processed}/${files.length} files processed`);
+      if (processed % 10 === 0 || processed === totalFiles) {
+        logger.info(`Progress: ${processed}/${totalFiles} files processed`);
       }
     } catch (error) {
       const duration = Date.now() - startTime;
-      logger.error(`Error processing ${file}`, { error: error.message, duration });
-      errors++;
+      logger.error(`Error processing group starting with ${group.primaryFile}`, { error: error.message, duration });
+      errors += group.files.length;
+      processed += group.files.length;
     }
   }
   

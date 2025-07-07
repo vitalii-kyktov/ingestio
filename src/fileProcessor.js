@@ -1,8 +1,8 @@
 import { promises as fs } from 'fs';
-import { join, extname, basename } from 'path';
+import { join, extname, basename, dirname } from 'path';
 import exifr from 'exifr';
 
-export async function scanFiles(sourcePath, includeExtensions, excludeExtensions, excludeFolders) {
+export async function scanFiles(sourcePath, includeExtensions, excludeExtensions, excludeFolders, maintainFileRelationships, primaryExtensions, companionExtensions) {
   const files = [];
   
   async function scan(dir) {
@@ -36,7 +36,18 @@ export async function scanFiles(sourcePath, includeExtensions, excludeExtensions
   }
   
   await scan(sourcePath);
-  return files;
+  
+  // Group files by relationships if enabled
+  if (maintainFileRelationships) {
+    return groupRelatedFiles(files, primaryExtensions, companionExtensions);
+  }
+  
+  // Return individual files wrapped in single-file groups for consistent processing
+  return files.map(file => ({
+    files: [file],
+    primaryFile: file,
+    companionFiles: []
+  }));
 }
 
 export async function extractFileDate(filePath, useExifDate) {
@@ -153,4 +164,98 @@ export async function processFile(sourcePath, targetDir, filename, copyFiles) {
   }
   
   return targetPath;
+}
+
+export function groupRelatedFiles(files, primaryExtensions, companionExtensions) {
+  const groups = new Map();
+  
+  // Group files by their base name (without extension)
+  for (const file of files) {
+    const filename = basename(file);
+    const ext = extname(filename).toLowerCase();
+    const baseName = filename.slice(0, filename.length - ext.length);
+    const dir = dirname(file);
+    const groupKey = join(dir, baseName);
+    
+    if (!groups.has(groupKey)) {
+      groups.set(groupKey, []);
+    }
+    groups.get(groupKey).push(file);
+  }
+  
+  // Convert groups to structured format
+  const fileGroups = [];
+  
+  for (const [groupKey, groupFiles] of groups) {
+    const primaryFiles = groupFiles.filter(file => {
+      const ext = extname(file).toLowerCase();
+      return primaryExtensions.includes(ext);
+    });
+    
+    const companionFiles = groupFiles.filter(file => {
+      const ext = extname(file).toLowerCase();
+      return companionExtensions.includes(ext);
+    });
+    
+    // If we have no primary files, treat each companion file as a standalone group
+    if (primaryFiles.length === 0) {
+      for (const companionFile of companionFiles) {
+        fileGroups.push({
+          files: [companionFile],
+          primaryFile: companionFile,
+          companionFiles: []
+        });
+      }
+    } else if (primaryFiles.length === 1) {
+      // Single primary file with companions
+      fileGroups.push({
+        files: [primaryFiles[0], ...companionFiles],
+        primaryFile: primaryFiles[0],
+        companionFiles: companionFiles
+      });
+    } else {
+      // Multiple primary files - create separate groups for each
+      for (const primary of primaryFiles) {
+        fileGroups.push({
+          files: [primary, ...companionFiles],
+          primaryFile: primary,
+          companionFiles: companionFiles
+        });
+      }
+    }
+  }
+  
+  return fileGroups;
+}
+
+export async function processFileGroup(group, date, cameraLabel, destinationRoot, onCollision, transferMode) {
+  const results = [];
+  
+  // Generate target path based on the primary file
+  const { targetDir, baseFilename } = generateTargetPath(date, cameraLabel, group.primaryFile, destinationRoot);
+  
+  // Get base filename without extension for consistent naming
+  const baseFilenameWithoutExt = basename(baseFilename, extname(baseFilename));
+  
+  // Process each file in the group
+  for (const file of group.files) {
+    const ext = extname(file);
+    const groupFilename = `${baseFilenameWithoutExt}${ext}`;
+    
+    let finalFilename;
+    if (onCollision === 'replace') {
+      finalFilename = groupFilename;
+    } else {
+      finalFilename = await findAvailableFilename(targetDir, groupFilename);
+    }
+    
+    const targetPath = await processFile(file, targetDir, finalFilename, transferMode === 'copy');
+    results.push({
+      sourcePath: file,
+      targetPath: targetPath,
+      isCompanion: group.companionFiles.includes(file)
+    });
+  }
+  
+  return results;
 }

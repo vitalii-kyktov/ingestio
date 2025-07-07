@@ -111,7 +111,7 @@ class Logger {
     this.info(`Starting file processing`, { totalFiles });
   }
 
-  logFileTransfer(sourceFile, targetFile, operation, fileSize, duration, success = true) {
+  logFileTransfer(sourceFile, targetFile, operation, fileSize, duration, success = true, isCompanion = false) {
     const transferData = {
       timestamp: new Date().toISOString(),
       sourceFile,
@@ -119,7 +119,8 @@ class Logger {
       operation, // 'copy' or 'move'
       fileSize,
       duration,
-      success
+      success,
+      isCompanion
     };
 
     this.reportData.files.push(transferData);
@@ -130,8 +131,9 @@ class Logger {
       this.reportData.summary.totalTime += duration;
       
       const speed = this.calculateTransferSpeed(fileSize, duration);
+      const fileType = isCompanion ? ' (companion)' : '';
       
-      this.info(`${operation.toUpperCase()} ${sourceFile} → ${targetFile}`, {
+      this.info(`${operation.toUpperCase()} ${sourceFile} → ${targetFile}${fileType}`, {
         size: this.formatBytes(fileSize),
         duration: `${duration}ms`,
         speed: speed

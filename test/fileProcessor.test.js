@@ -7,7 +7,9 @@ import {
   extractFileDate, 
   generateTargetPath, 
   findAvailableFilename,
-  processFile 
+  processFile,
+  groupRelatedFiles,
+  processFileGroup
 } from '../src/fileProcessor.js';
 
 describe('fileProcessor.js', () => {
@@ -41,15 +43,17 @@ describe('fileProcessor.js', () => {
       const excludeExtensions = [];
       const excludeFolders = ['excluded'];
 
-      const files = await scanFiles(testDir, includeExtensions, excludeExtensions, excludeFolders);
-
-      expect(files).toHaveLength(4);
-      expect(files).toContain(join(testDir, 'image1.jpg'));
-      expect(files).toContain(join(testDir, 'image2.JPG'));
-      expect(files).toContain(join(testDir, 'video.mp4'));
-      expect(files).toContain(join(testDir, 'subdir', 'image3.jpg'));
-      expect(files).not.toContain(join(testDir, 'document.txt'));
-      expect(files).not.toContain(join(testDir, 'excluded', 'image4.jpg'));
+      // Test with relationship maintenance disabled (old behavior)
+      const fileGroups = await scanFiles(testDir, includeExtensions, excludeExtensions, excludeFolders, false, [], []);
+      
+      expect(fileGroups).toHaveLength(4);
+      const allFiles = fileGroups.flatMap(group => group.files);
+      expect(allFiles).toContain(join(testDir, 'image1.jpg'));
+      expect(allFiles).toContain(join(testDir, 'image2.JPG'));
+      expect(allFiles).toContain(join(testDir, 'video.mp4'));
+      expect(allFiles).toContain(join(testDir, 'subdir', 'image3.jpg'));
+      expect(allFiles).not.toContain(join(testDir, 'document.txt'));
+      expect(allFiles).not.toContain(join(testDir, 'excluded', 'image4.jpg'));
     });
 
     it('should skip macOS resource fork files', async () => {
@@ -67,22 +71,24 @@ describe('fileProcessor.js', () => {
       const excludeExtensions = [];
       const excludeFolders = [];
 
-      const files = await scanFiles(testDir, includeExtensions, excludeExtensions, excludeFolders);
-
-      expect(files).toHaveLength(2);
-      expect(files).toContain(join(testDir, 'image1.jpg'));
-      expect(files).toContain(join(testDir, 'video.mp4'));
-      expect(files).not.toContain(join(testDir, '._image1.jpg'));
-      expect(files).not.toContain(join(testDir, '._video.mp4'));
-      expect(files).not.toContain(join(testDir, '._hidden_file.txt'));
+      // Test with relationship maintenance disabled (old behavior)
+      const fileGroups = await scanFiles(testDir, includeExtensions, excludeExtensions, excludeFolders, false, [], []);
+      
+      expect(fileGroups).toHaveLength(2);
+      const allFiles = fileGroups.flatMap(group => group.files);
+      expect(allFiles).toContain(join(testDir, 'image1.jpg'));
+      expect(allFiles).toContain(join(testDir, 'video.mp4'));
+      expect(allFiles).not.toContain(join(testDir, '._image1.jpg'));
+      expect(allFiles).not.toContain(join(testDir, '._video.mp4'));
+      expect(allFiles).not.toContain(join(testDir, '._hidden_file.txt'));
     });
 
     it('should handle empty directories', async () => {
       const testDir = join(tempDir, 'empty-source');
       await fs.mkdir(testDir, { recursive: true });
 
-      const files = await scanFiles(testDir, ['.jpg'], [], []);
-      expect(files).toHaveLength(0);
+      const fileGroups = await scanFiles(testDir, ['.jpg'], [], [], false, [], []);
+      expect(fileGroups).toHaveLength(0);
     });
 
     it('should exclude files by extension', async () => {
@@ -96,10 +102,11 @@ describe('fileProcessor.js', () => {
       const excludeExtensions = ['.tmp'];
       const excludeFolders = [];
 
-      const files = await scanFiles(testDir, includeExtensions, excludeExtensions, excludeFolders);
+      const fileGroups = await scanFiles(testDir, includeExtensions, excludeExtensions, excludeFolders, false, [], []);
 
-      expect(files).toHaveLength(1);
-      expect(files[0]).toBe(join(testDir, 'image1.jpg'));
+      expect(fileGroups).toHaveLength(1);
+      const allFiles = fileGroups.flatMap(group => group.files);
+      expect(allFiles[0]).toBe(join(testDir, 'image1.jpg'));
     });
   });
 
@@ -407,6 +414,120 @@ describe('fileProcessor.js', () => {
         // Restore original fs.rename
         fs.rename = originalRename;
       }
+    });
+  });
+
+  describe('File Relationship System', () => {
+    it('should group related files by basename', async () => {
+      const testDir = join(tempDir, 'test-source');
+      await fs.mkdir(testDir, { recursive: true });
+
+      // Create DJI Mini Pro 4 style files
+      await fs.writeFile(join(testDir, 'DJI_20250706141254_0019.MP4'), 'video content');
+      await fs.writeFile(join(testDir, 'DJI_20250706141254_0019.SRT'), 'subtitle content');
+      await fs.writeFile(join(testDir, 'DJI_20250706141300_0020.MP4'), 'video content 2');
+      await fs.writeFile(join(testDir, 'standalone.JPG'), 'image content');
+
+      const includeExtensions = ['.mp4', '.srt', '.jpg'];
+      const excludeExtensions = [];
+      const excludeFolders = [];
+      const primaryExtensions = ['.mp4', '.jpg'];
+      const companionExtensions = ['.srt'];
+
+      const fileGroups = await scanFiles(
+        testDir, 
+        includeExtensions, 
+        excludeExtensions, 
+        excludeFolders, 
+        true, // Enable relationship maintenance
+        primaryExtensions, 
+        companionExtensions
+      );
+
+      expect(fileGroups).toHaveLength(3); // Two video groups + one standalone image
+
+      // Find the group with SRT companion
+      const videoWithSrtGroup = fileGroups.find(group => 
+        group.companionFiles.some(file => file.endsWith('.SRT'))
+      );
+
+      expect(videoWithSrtGroup).toBeTruthy();
+      expect(videoWithSrtGroup.files).toHaveLength(2);
+      expect(videoWithSrtGroup.primaryFile).toContain('DJI_20250706141254_0019.MP4');
+      expect(videoWithSrtGroup.companionFiles).toHaveLength(1);
+      expect(videoWithSrtGroup.companionFiles[0]).toContain('DJI_20250706141254_0019.SRT');
+
+      // Check standalone video group
+      const standaloneVideoGroup = fileGroups.find(group => 
+        group.primaryFile.endsWith('0020.MP4')
+      );
+
+      expect(standaloneVideoGroup).toBeTruthy();
+      expect(standaloneVideoGroup.files).toHaveLength(1);
+      expect(standaloneVideoGroup.companionFiles).toHaveLength(0);
+
+      // Check standalone image group
+      const imageGroup = fileGroups.find(group => 
+        group.primaryFile.endsWith('standalone.JPG')
+      );
+
+      expect(imageGroup).toBeTruthy();
+      expect(imageGroup.files).toHaveLength(1);
+      expect(imageGroup.companionFiles).toHaveLength(0);
+    });
+
+    it('should process file groups with consistent naming', async () => {
+      const testDir = join(tempDir, 'test-source');
+      const targetDir = join(tempDir, 'test-target');
+      await fs.mkdir(testDir, { recursive: true });
+
+      // Create test files
+      await fs.writeFile(join(testDir, 'DJI_20250706141254_0019.MP4'), 'video content');
+      await fs.writeFile(join(testDir, 'DJI_20250706141254_0019.SRT'), 'subtitle content');
+
+      // Set specific modification times
+      const testDate = new Date('2025-07-06T14:12:54Z');
+      await fs.utimes(join(testDir, 'DJI_20250706141254_0019.MP4'), testDate, testDate);
+      await fs.utimes(join(testDir, 'DJI_20250706141254_0019.SRT'), testDate, testDate);
+
+      const group = {
+        files: [
+          join(testDir, 'DJI_20250706141254_0019.MP4'),
+          join(testDir, 'DJI_20250706141254_0019.SRT')
+        ],
+        primaryFile: join(testDir, 'DJI_20250706141254_0019.MP4'),
+        companionFiles: [join(testDir, 'DJI_20250706141254_0019.SRT')]
+      };
+
+      const results = await processFileGroup(
+        group,
+        testDate,
+        'DJI_Mini4Pro',
+        targetDir,
+        'rename',
+        'copy'
+      );
+
+      expect(results).toHaveLength(2);
+
+      // Check that both files have the same base name but different extensions
+      const videoResult = results.find(r => r.sourcePath.endsWith('.MP4'));
+      const srtResult = results.find(r => r.sourcePath.endsWith('.SRT'));
+
+      expect(videoResult).toBeTruthy();
+      expect(srtResult).toBeTruthy();
+
+      // Both should have the same timestamp-based naming
+      expect(videoResult.targetPath).toMatch(/14_12_54_DJI_Mini4Pro\.MP4$/);
+      expect(srtResult.targetPath).toMatch(/14_12_54_DJI_Mini4Pro\.SRT$/);
+
+      // Verify companion flag
+      expect(videoResult.isCompanion).toBe(false);
+      expect(srtResult.isCompanion).toBe(true);
+
+      // Verify files were actually copied
+      expect(await fs.readFile(videoResult.targetPath, 'utf-8')).toBe('video content');
+      expect(await fs.readFile(srtResult.targetPath, 'utf-8')).toBe('subtitle content');
     });
   });
 });

@@ -56,7 +56,7 @@ describe('config.js', () => {
       expect(result.transferMode).toBe('move');
       expect(result.useExifDate).toBe(false);
       expect(result.onCollision).toBe('replace');
-      expect(result.includeExtensions).toEqual(['.jpg', '.jpeg', '.raw', '.cr2', '.nef', '.arw', '.dng', '.mp4', '.mov', '.avi']);
+      expect(result.includeExtensions).toEqual(['.jpg', '.jpeg', '.raw', '.cr2', '.nef', '.arw', '.dng', '.mp4', '.mov', '.avi', '.srt']);
     });
 
     it('should throw error for missing required fields', () => {

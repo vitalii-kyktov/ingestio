@@ -78,13 +78,16 @@ export function validateProfile(profile) {
     sourcePath: profile.sourcePath,
     destinationRoot: profile.destinationRoot,
     cameraLabel: profile.cameraLabel,
-    includeExtensions: profile.includeExtensions || ['.jpg', '.jpeg', '.raw', '.cr2', '.nef', '.arw', '.dng', '.mp4', '.mov', '.avi'],
+    includeExtensions: profile.includeExtensions || ['.jpg', '.jpeg', '.raw', '.cr2', '.nef', '.arw', '.dng', '.mp4', '.mov', '.avi', '.srt'],
     excludeExtensions: profile.excludeExtensions || [],
     excludeFolders: profile.excludeFolders || [],
     transferMode: transferMode,
     useExifDate: profile.useExifDate !== false, // default to true
     onCollision: profile.onCollision || 'rename', // default to rename
     logLevel: profile.logLevel || 'info', // default to info
+    maintainFileRelationships: profile.maintainFileRelationships !== false, // default to true
+    primaryExtensions: profile.primaryExtensions || ['.mp4', '.mov', '.avi', '.jpg', '.jpeg', '.raw', '.cr2', '.nef', '.arw', '.dng'],
+    companionExtensions: profile.companionExtensions || ['.srt', '.lrf', '.xmp'],
   };
 }
 
