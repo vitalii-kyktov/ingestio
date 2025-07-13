@@ -1,6 +1,7 @@
 import prompts from 'prompts';
 import { loadProfiles, validateProfile, saveProfile } from './config.js';
 import { scanFiles, extractFileDate, generateTargetPath, findAvailableFilename, processFile, processFileGroup } from './fileProcessor.js';
+import { hasGpsData, writeGpsData, parseCoordinateString, formatCoordinates } from './gpsHandler.js';
 import Logger from './logger.js';
 
 export async function main() {
@@ -46,6 +47,16 @@ export async function main() {
       if (args.camera) finalProfile.cameraLabel = args.camera;
       if (args.onCollision) finalProfile.onCollision = args.onCollision;
       if (args.logLevel) finalProfile.logLevel = args.logLevel;
+      if (args.gpsCoordinates) {
+        const parsed = parseCoordinateString(args.gpsCoordinates);
+        if (parsed.error) {
+          console.error(`Invalid GPS coordinates: ${parsed.error}`);
+          process.exit(1);
+        }
+        finalProfile.gpsCoordinates = { latitude: parsed.latitude, longitude: parsed.longitude };
+        finalProfile.addGpsData = true;
+      }
+      if (args.gpsSkip) finalProfile.addGpsData = false;
     } else {
       finalProfile = await promptOverrides(selectedProfile);
     }
@@ -89,6 +100,10 @@ function parseArgs() {
       parsed.logLevel = args[++i];
     } else if (arg === '--report' || arg === '-r') {
       parsed.report = args[++i] || true;
+    } else if (arg === '--gps' || arg === '-g') {
+      parsed.gpsCoordinates = args[++i];
+    } else if (arg === '--gps-skip') {
+      parsed.gpsSkip = true;
     }
   }
   
@@ -111,6 +126,9 @@ Options:
   --on-collision <action> File collision handling: 'rename' or 'replace'
   -l, --log-level <level> Set log level: 'debug', 'info', 'warn', 'error'
   -r, --report [filename] Generate import report (optional filename)
+  -g, --gps <coordinates> Add GPS coordinates to files missing location data
+                          Format: "latitude,longitude" (e.g., "40.7128,-74.0060")
+  --gps-skip              Skip GPS coordinate prompting (for headless mode)
   --headless              Run without interactive prompts
 
 Examples:
@@ -120,6 +138,8 @@ Examples:
   cardingest -p dji-drone -s /Volumes/SD_CARD --headless
   cardingest -p dji-drone --on-collision replace --headless
   cardingest -p dji-drone --log-level debug --report my-import.txt
+  cardingest -p dji-drone --gps "40.7128,-74.0060" --headless
+  cardingest -p dji-drone --gps-skip --headless
 
 Profiles are stored in ~/.cardingest/profiles/
 `);
@@ -217,6 +237,12 @@ async function createProfile() {
         { title: 'Error (errors only)', value: 'error' }
       ],
       initial: 0
+    },
+    {
+      type: 'confirm',
+      name: 'addGpsData',
+      message: 'Add GPS coordinates to files missing location data by default?',
+      initial: false
     }
   ];
   
@@ -250,10 +276,37 @@ async function promptOverrides(profile) {
       name: 'cameraLabel',
       message: 'Camera label:',
       initial: profile.cameraLabel
+    },
+    {
+      type: 'confirm',
+      name: 'addGpsData',
+      message: 'Add GPS coordinates to files missing location data?',
+      initial: profile.addGpsData || false
     }
   ];
   
   const overrides = await prompts(questions);
+  
+  // If user wants to add GPS data, prompt for coordinates
+  if (overrides.addGpsData) {
+    const gpsQuestion = {
+      type: 'text',
+      name: 'gpsCoordinates',
+      message: 'Enter GPS coordinates (latitude,longitude):',
+      initial: profile.gpsCoordinates ? `${profile.gpsCoordinates.latitude},${profile.gpsCoordinates.longitude}` : '',
+      validate: (input) => {
+        if (!input.trim()) return 'GPS coordinates are required';
+        const parsed = parseCoordinateString(input);
+        return parsed.error || true;
+      }
+    };
+    
+    const gpsAnswer = await prompts(gpsQuestion);
+    if (gpsAnswer.gpsCoordinates) {
+      const parsed = parseCoordinateString(gpsAnswer.gpsCoordinates);
+      overrides.gpsCoordinates = { latitude: parsed.latitude, longitude: parsed.longitude };
+    }
+  }
   
   return { ...profile, ...overrides };
 }
@@ -267,7 +320,9 @@ async function runImport(profile, headless = false, logger) {
     destination: profile.destinationRoot,
     camera: profile.cameraLabel,
     transferMode: profile.transferMode,
-    logLevel: profile.logLevel
+    logLevel: profile.logLevel,
+    addGpsData: profile.addGpsData,
+    gpsCoordinates: profile.gpsCoordinates ? formatCoordinates(profile.gpsCoordinates.latitude, profile.gpsCoordinates.longitude) : undefined
   });
   
   if (!headless) {
@@ -327,6 +382,7 @@ async function runImport(profile, headless = false, logger) {
   
   let processed = 0;
   let errors = 0;
+  let gpsAdded = 0;
   
   for (const group of fileGroups) {
     const startTime = Date.now();
@@ -345,7 +401,7 @@ async function runImport(profile, headless = false, logger) {
         profile.transferMode
       );
       
-      // Log each file transfer in the group
+      // Log each file transfer in the group and handle GPS data
       for (const result of results) {
         const stats = await import('fs').then(fs => fs.promises.stat(result.targetPath));
         const duration = Date.now() - startTime;
@@ -359,6 +415,28 @@ async function runImport(profile, headless = false, logger) {
           true,
           result.isCompanion
         );
+        
+        // Add GPS data if requested and file doesn't have it
+        if (profile.addGpsData && profile.gpsCoordinates) {
+          try {
+            const hasGps = await hasGpsData(result.targetPath);
+            if (!hasGps) {
+              await writeGpsData(
+                result.targetPath,
+                profile.gpsCoordinates.latitude,
+                profile.gpsCoordinates.longitude
+              );
+              logger.debug(`Added GPS coordinates to ${result.targetPath}`, {
+                coordinates: formatCoordinates(profile.gpsCoordinates.latitude, profile.gpsCoordinates.longitude)
+              });
+              gpsAdded++;
+            } else {
+              logger.debug(`Skipped GPS for ${result.targetPath} (already has location data)`);
+            }
+          } catch (error) {
+            logger.warn(`Failed to add GPS data to ${result.targetPath}`, { error: error.message });
+          }
+        }
         
         processed++;
       }
@@ -377,6 +455,7 @@ async function runImport(profile, headless = false, logger) {
   logger.info('Import completed', {
     processed,
     errors,
+    gpsAdded,
     operation: profile.transferMode,
     totalSize: logger.formatBytes(totalSize)
   });
@@ -390,6 +469,9 @@ async function runImport(profile, headless = false, logger) {
     console.log('='.repeat(50));
     console.log(`Files processed: ${processed}`);
     console.log(`Errors: ${errors}`);
+    if (gpsAdded > 0) {
+      console.log(`GPS coordinates added: ${gpsAdded}`);
+    }
     console.log(`Operation: ${profile.transferMode === 'copy' ? 'Copy' : 'Move'}`);
     console.log(`Total size: ${logger.formatBytes(totalSize)}`);
     if (logger.reportFile) {
