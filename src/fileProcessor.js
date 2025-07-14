@@ -108,13 +108,18 @@ export async function extractFileDate(filePath, useExifDate) {
   return stats.mtime;
 }
 
-export function generateTargetPath(date, cameraLabel, originalPath, destinationRoot) {
+export function generateTargetPath(date, cameraLabel, originalPath, destinationRoot, filenameFormat = '{date}_{time}_{camera}') {
   const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
-  const timeStr = date.toTimeString().split(' ')[0].replace(/:/g, '_'); // HH_MM_SS
+  const timeStr = date.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
   
   const ext = extname(originalPath);
   const targetDir = join(destinationRoot, dateStr);
-  const baseFilename = `${timeStr}_${cameraLabel}${ext}`;
+  
+  // Generate filename from format template
+  const baseFilename = filenameFormat
+    .replace('{date}', dateStr)
+    .replace('{time}', timeStr)
+    .replace('{camera}', cameraLabel) + ext;
   
   return { targetDir, baseFilename };
 }
@@ -228,11 +233,11 @@ export function groupRelatedFiles(files, primaryExtensions, companionExtensions)
   return fileGroups;
 }
 
-export async function processFileGroup(group, date, cameraLabel, destinationRoot, onCollision, transferMode) {
+export async function processFileGroup(group, date, cameraLabel, destinationRoot, onCollision, transferMode, filenameFormat) {
   const results = [];
   
   // Generate target path based on the primary file
-  const { targetDir, baseFilename } = generateTargetPath(date, cameraLabel, group.primaryFile, destinationRoot);
+  const { targetDir, baseFilename } = generateTargetPath(date, cameraLabel, group.primaryFile, destinationRoot, filenameFormat);
   
   // Get base filename without extension for consistent naming
   const baseFilenameWithoutExt = basename(baseFilename, extname(baseFilename));

@@ -68,8 +68,10 @@ describe('DNG EXIF Regression Tests', () => {
       
       // They should be in the same directory with the same timestamp
       expect(jpgTarget.targetDir).toBe(dngTarget.targetDir);
-      expect(jpgTarget.baseFilename.split('_').slice(0, 3).join('_'))
-        .toBe(dngTarget.baseFilename.split('_').slice(0, 3).join('_'));
+      // Extract date and time parts from the new filename format (YYYY-MM-DD_HH-MM-SS_camera.ext)
+      const jpgTimestamp = jpgTarget.baseFilename.split('_').slice(0, 2).join('_');
+      const dngTimestamp = dngTarget.baseFilename.split('_').slice(0, 2).join('_');
+      expect(jpgTimestamp).toBe(dngTimestamp);
     });
 
     it('should handle timezone edge cases correctly', async () => {
@@ -100,8 +102,8 @@ describe('DNG EXIF Regression Tests', () => {
         const extractedDate = await extractFileDate(testFile, true);
         const target = generateTargetPath(extractedDate, 'TestCam', testFile, '/test');
         
-        // Extract hour from the generated filename (format: HH_MM_SS_TestCam.dng)
-        const filenameHour = target.baseFilename.split('_')[0];
+        // Extract hour from the generated filename (format: YYYY-MM-DD_HH-MM-SS_TestCam.dng)
+        const filenameHour = target.baseFilename.split('_')[1].split('-')[0];
         
         expect(filenameHour).toBe(testCase.expectedHour);
       }

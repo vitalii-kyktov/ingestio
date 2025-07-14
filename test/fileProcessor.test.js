@@ -213,7 +213,7 @@ describe('fileProcessor.js', () => {
   });
 
   describe('generateTargetPath', () => {
-    it('should generate correct target path structure', () => {
+    it('should generate correct target path structure with default format', () => {
       const date = new Date('2024-01-15T09:30:45Z');
       const cameraLabel = 'TestCamera';
       const originalPath = '/source/image.jpg';
@@ -222,10 +222,10 @@ describe('fileProcessor.js', () => {
       const result = generateTargetPath(date, cameraLabel, originalPath, destinationRoot);
 
       expect(result.targetDir).toBe('/destination/2024-01-15');
-      expect(result.baseFilename).toBe('09_30_45_TestCamera.jpg');
+      expect(result.baseFilename).toBe('2024-01-15_09-30-45_TestCamera.jpg');
     });
 
-    it('should handle different file extensions', () => {
+    it('should handle different file extensions with default format', () => {
       const date = new Date('2024-12-25T23:59:59Z');
       const cameraLabel = 'DJI';
       const originalPath = '/source/video.mp4';
@@ -234,7 +234,20 @@ describe('fileProcessor.js', () => {
       const result = generateTargetPath(date, cameraLabel, originalPath, destinationRoot);
 
       expect(result.targetDir).toBe('/footage/2024-12-25');
-      expect(result.baseFilename).toBe('23_59_59_DJI.mp4');
+      expect(result.baseFilename).toBe('2024-12-25_23-59-59_DJI.mp4');
+    });
+
+    it('should support custom filename formats', () => {
+      const date = new Date('2024-01-15T09:30:45Z');
+      const cameraLabel = 'TestCamera';
+      const originalPath = '/source/image.jpg';
+      const destinationRoot = '/destination';
+      const customFormat = '{time}_{camera}_{date}';
+
+      const result = generateTargetPath(date, cameraLabel, originalPath, destinationRoot, customFormat);
+
+      expect(result.targetDir).toBe('/destination/2024-01-15');
+      expect(result.baseFilename).toBe('09-30-45_TestCamera_2024-01-15.jpg');
     });
   });
 
@@ -505,7 +518,8 @@ describe('fileProcessor.js', () => {
         'DJI_Mini4Pro',
         targetDir,
         'rename',
-        'copy'
+        'copy',
+        '{date}_{time}_{camera}'
       );
 
       expect(results).toHaveLength(2);
@@ -518,8 +532,8 @@ describe('fileProcessor.js', () => {
       expect(srtResult).toBeTruthy();
 
       // Both should have the same timestamp-based naming
-      expect(videoResult.targetPath).toMatch(/14_12_54_DJI_Mini4Pro\.MP4$/);
-      expect(srtResult.targetPath).toMatch(/14_12_54_DJI_Mini4Pro\.SRT$/);
+      expect(videoResult.targetPath).toMatch(/2025-07-06_14-12-54_DJI_Mini4Pro\.MP4$/);
+      expect(srtResult.targetPath).toMatch(/2025-07-06_14-12-54_DJI_Mini4Pro\.SRT$/);
 
       // Verify companion flag
       expect(videoResult.isCompanion).toBe(false);

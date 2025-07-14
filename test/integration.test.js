@@ -95,13 +95,13 @@ describe('Integration Tests', () => {
       // Verify that paired files have similar timestamps
       for (const [baseName, pair] of Object.entries(pairs)) {
         if (pair.jpg && pair.dng) {
-          // Extract time components from filenames
-          const jpgTime = pair.jpg.filename.split('_').slice(0, 3).join('_');
-          const dngTime = pair.dng.filename.split('_').slice(0, 3).join('_');
+          // Extract time components from filenames (new format: YYYY-MM-DD_HH-MM-SS_camera.ext)
+          const jpgTime = pair.jpg.filename.split('_')[1]; // HH-MM-SS
+          const dngTime = pair.dng.filename.split('_')[1]; // HH-MM-SS
           
-          // Parse times to compare (format: HH_MM_SS)
-          const jpgSeconds = jpgTime.split('_').map(Number);
-          const dngSeconds = dngTime.split('_').map(Number);
+          // Parse times to compare (format: HH-MM-SS)
+          const jpgSeconds = jpgTime.split('-').map(Number);
+          const dngSeconds = dngTime.split('-').map(Number);
           
           const jpgTotalSeconds = jpgSeconds[0] * 3600 + jpgSeconds[1] * 60 + jpgSeconds[2];
           const dngTotalSeconds = dngSeconds[0] * 3600 + dngSeconds[1] * 60 + dngSeconds[2];

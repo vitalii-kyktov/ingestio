@@ -86,8 +86,9 @@ export function validateProfile(profile) {
     onCollision: profile.onCollision || 'rename', // default to rename
     logLevel: profile.logLevel || 'info', // default to info
     maintainFileRelationships: profile.maintainFileRelationships !== false, // default to true
-    primaryExtensions: profile.primaryExtensions || ['.mp4', '.mov', '.avi', '.jpg', '.jpeg', '.raw', '.cr2', '.nef', '.arw', '.dng'],
+    primaryExtensions: profile.primaryExtensions || ['.mp4', '.mov', '.avi', '.jpg', '.jpeg', '.heic', '.raw', '.cr2', '.nef', '.arw', '.dng'],
     companionExtensions: profile.companionExtensions || ['.srt', '.lrf', '.xmp'],
+    filenameFormat: profile.filenameFormat || '{date}_{time}_{camera}', // default format: YYYY-MM-DD_HH-MM-SS_camera
   };
 }
 

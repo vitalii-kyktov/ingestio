@@ -398,7 +398,8 @@ async function runImport(profile, headless = false, logger) {
         profile.cameraLabel,
         profile.destinationRoot,
         profile.onCollision,
-        profile.transferMode
+        profile.transferMode,
+        profile.filenameFormat
       );
       
       // Log each file transfer in the group and handle GPS data
