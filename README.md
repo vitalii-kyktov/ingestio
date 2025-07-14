@@ -62,8 +62,8 @@ A powerful, intelligent command-line utility for importing and organizing raw me
 
 ### Method 1: Global Installation (Recommended)
 ```bash
-# Install directly from GitHub
-npm install -g git+https://github.com/vitalii-kyktov/ingestio.git
+# Install directly from GitHub  
+bun install -g git+https://github.com/vitalii-kyktov/ingestio.git
 
 # Verify installation
 ingestio --help
@@ -76,7 +76,7 @@ git clone https://github.com/vitalii-kyktov/ingestio.git
 cd ingestio
 
 # Install globally
-npm install -g .
+bun install -g .
 
 # Verify installation
 ingestio --help
@@ -92,8 +92,13 @@ cd ingestio
 bun install
 
 # Run directly with Bun
-ingestio
+bun start
 ```
+
+> **Note**: If you don't have Bun installed, you can use npm as a fallback:
+> ```bash
+> npm install -g git+https://github.com/vitalii-kyktov/ingestio.git
+> ```
 
 ### Install exiftool (for GPS features)
 ```bash
