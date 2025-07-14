@@ -8,7 +8,7 @@ describe('DNG EXIF Regression Tests', () => {
   let tempDir
 
   beforeEach(async () => {
-    tempDir = await fs.mkdtemp(join(tmpdir(), 'cardingest-dng-test-'))
+    tempDir = await fs.mkdtemp(join(tmpdir(), 'ingestio-dng-test-'))
   })
 
   afterEach(async () => {

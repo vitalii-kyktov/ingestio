@@ -16,7 +16,7 @@ describe('fileProcessor.js', () => {
   let tempDir
 
   beforeEach(async () => {
-    tempDir = await fs.mkdtemp(join(tmpdir(), 'cardingest-test-'))
+    tempDir = await fs.mkdtemp(join(tmpdir(), 'ingestio-test-'))
   })
 
   afterEach(async () => {

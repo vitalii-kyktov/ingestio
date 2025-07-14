@@ -16,7 +16,7 @@ describe('Integration Tests', () => {
   let destDir
 
   beforeEach(async () => {
-    tempDir = await fs.mkdtemp(join(tmpdir(), 'cardingest-integration-'))
+    tempDir = await fs.mkdtemp(join(tmpdir(), 'ingestio-integration-'))
     sourceDir = join(tempDir, 'source')
     destDir = join(tempDir, 'destination')
 

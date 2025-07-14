@@ -1,11 +1,11 @@
 {
-  "name": "cardingest",
+  "name": "ingestio",
   "version": "1.0.0",
   "description": "Intelligent CLI tool for importing raw media from SD cards into structured local footage libraries",
   "type": "module",
   "main": "src/index.js",
   "bin": {
-    "cardingest": "./src/index.js"
+    "ingestio": "./src/index.js"
   },
   "scripts": {
     "start": "bun run src/index.js",

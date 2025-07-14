@@ -15,7 +15,7 @@ describe('GPS Handler', () => {
   let testFile
 
   beforeEach(async () => {
-    tempDir = await fs.mkdtemp(join(tmpdir(), 'cardingest-gps-test-'))
+    tempDir = await fs.mkdtemp(join(tmpdir(), 'ingestio-gps-test-'))
     testFile = join(tempDir, 'test.jpg')
 
     // Create a minimal test image file

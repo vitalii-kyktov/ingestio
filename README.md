@@ -1,10 +1,10 @@
-# cardingest
+# ingestio
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A powerful, intelligent command-line utility for importing and organizing raw media from SD cards and storage devices into structured local libraries. Built for photographers, videographers, and content creators who need reliable, automated media management workflows.
 
-## Why cardingest?
+## Why ingestio?
 
 **The Problem**: Modern cameras and drones generate thousands of files across multiple formats (RAW, JPEG, video, subtitles, metadata), but importing them manually is time-consuming and error-prone. Traditional file copy tools don't understand media workflows, leading to:
 
@@ -14,7 +14,7 @@ A powerful, intelligent command-line utility for importing and organizing raw me
 - ❌ Missing or invalid GPS metadata
 - ❌ Filename collisions and overwrites
 
-**The Solution**: cardingest provides profile-based automation that understands media workflows, preserves file relationships, validates metadata, and organizes everything consistently.
+**The Solution**: ingestio provides profile-based automation that understands media workflows, preserves file relationships, validates metadata, and organizes everything consistently.
 
 ## Key Features
 
@@ -61,8 +61,8 @@ A powerful, intelligent command-line utility for importing and organizing raw me
 ### Install
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/cardingest.git
-cd cardingest
+git clone https://github.com/your-username/ingestio.git
+cd ingestio
 
 # Install dependencies
 bun install
@@ -163,10 +163,10 @@ bun start --profile base-profile \\
 
 ### Profile Structure
 
-Profiles are stored as YAML files in `~/.cardingest/profiles/`. Here's a complete example:
+Profiles are stored as YAML files in `~/.ingestio/profiles/`. Here's a complete example:
 
 ```yaml
-# ~/.cardingest/profiles/dji-mini-pro-4.yaml
+# ~/.ingestio/profiles/dji-mini-pro-4.yaml
 sourcePath: /Volumes/DJI_SD
 destinationRoot: ~/Aerial_Footage
 cameraLabel: DJI_Mini4Pro
@@ -217,7 +217,7 @@ Examples:
 
 ### GPS Coordinate Formats
 
-cardingest accepts GPS coordinates in multiple formats:
+ingestio accepts GPS coordinates in multiple formats:
 
 ```bash
 # Decimal degrees
@@ -254,7 +254,7 @@ Files are organized in a clean, date-based hierarchy:
 ## Command Line Reference
 
 ```bash
-cardingest [options]
+ingestio [options]
 
 Options:
   -h, --help                    Show help message
@@ -270,16 +270,16 @@ Options:
   --gps-skip                    Skip GPS prompts in headless mode
 
 Examples:
-  cardingest                                    # Interactive mode
-  cardingest --profile dji-drone                # Use profile with confirmation  
-  cardingest --profile dji-drone --headless     # Fully automated
-  cardingest --profile dji-drone --gps "40.7128,-74.0060" --headless
-  cardingest --profile dji-drone --source /Volumes/SD --headless
+  ingestio                                    # Interactive mode
+  ingestio --profile dji-drone                # Use profile with confirmation  
+  ingestio --profile dji-drone --headless     # Fully automated
+  ingestio --profile dji-drone --gps "40.7128,-74.0060" --headless
+  ingestio --profile dji-drone --source /Volumes/SD --headless
 ```
 
 ## Sample Profiles
 
-cardingest works great with these camera systems:
+ingestio works great with these camera systems:
 
 ### DJI Drones (Mini, Air, Mavic series)
 ```yaml
@@ -346,7 +346,7 @@ Reports include:
 - Individual file transfer details (debug mode)
 - Complete error log with context
 
-Reports are saved to `~/.cardingest/reports/` and can be used for:
+Reports are saved to `~/.ingestio/reports/` and can be used for:
 - Progress auditing and verification
 - Performance analysis  
 - Future resume functionality
@@ -358,8 +358,8 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 ### Development Setup
 ```bash
-git clone https://github.com/your-username/cardingest.git
-cd cardingest
+git clone https://github.com/your-username/ingestio.git
+cd ingestio
 bun install
 
 # Run tests
@@ -378,10 +378,10 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Support
 
-- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/your-username/cardingest/issues)
-- 💡 **Feature Requests**: [GitHub Discussions](https://github.com/your-username/cardingest/discussions)  
-- 📖 **Documentation**: [Wiki](https://github.com/your-username/cardingest/wiki)
+- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/your-username/ingestio/issues)
+- 💡 **Feature Requests**: [GitHub Discussions](https://github.com/your-username/ingestio/discussions)  
+- 📖 **Documentation**: [Wiki](https://github.com/your-username/ingestio/wiki)
 
 ---
 
-**Built for creators, by creators.** cardingest handles the tedious parts of media management so you can focus on what matters: creating amazing content.
+**Built for creators, by creators.** ingestio handles the tedious parts of media management so you can focus on what matters: creating amazing content.

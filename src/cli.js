@@ -118,10 +118,10 @@ function parseArgs() {
 
 function showHelp() {
   console.log(`
-cardingest - Import raw media from SD cards
+ingestio - Import raw media from SD cards
 
 Usage:
-  cardingest [options]
+  ingestio [options]
 
 Options:
   -h, --help              Show this help message
@@ -138,16 +138,16 @@ Options:
   --headless              Run without interactive prompts
 
 Examples:
-  cardingest                           # Interactive mode
-  cardingest -p dji-drone             # Use specific profile
-  cardingest -p dji-drone --headless  # Headless mode
-  cardingest -p dji-drone -s /Volumes/SD_CARD --headless
-  cardingest -p dji-drone --on-collision replace --headless
-  cardingest -p dji-drone --log-level debug --report my-import.txt
-  cardingest -p dji-drone --gps "40.7128,-74.0060" --headless
-  cardingest -p dji-drone --gps-skip --headless
+  ingestio                           # Interactive mode
+  ingestio -p dji-drone             # Use specific profile
+  ingestio -p dji-drone --headless  # Headless mode
+  ingestio -p dji-drone -s /Volumes/SD_CARD --headless
+  ingestio -p dji-drone --on-collision replace --headless
+  ingestio -p dji-drone --log-level debug --report my-import.txt
+  ingestio -p dji-drone --gps "40.7128,-74.0060" --headless
+  ingestio -p dji-drone --gps-skip --headless
 
-Profiles are stored in ~/.cardingest/profiles/
+Profiles are stored in ~/.ingestio/profiles/
 `)
 }
 
@@ -480,7 +480,7 @@ async function runImport(profile, headless = false, logger) {
     console.log(`Operation: ${profile.transferMode === 'copy' ? 'Copy' : 'Move'}`)
     console.log(`Total size: ${logger.formatBytes(totalSize)}`)
     if (logger.reportFile) {
-      console.log(`Report saved to: ~/.cardingest/reports/${logger.reportFile}`)
+      console.log(`Report saved to: ~/.ingestio/reports/${logger.reportFile}`)
     }
   }
 }

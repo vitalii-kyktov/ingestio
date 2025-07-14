@@ -1,6 +1,6 @@
 # Development Logs
 
-This directory contains detailed documentation of challenges encountered during the development of cardingest, along with their root causes and solutions.
+This directory contains detailed documentation of challenges encountered during the development of ingestio, along with their root causes and solutions.
 
 ## Log Format
 

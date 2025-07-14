@@ -9,7 +9,7 @@ describe('config.js', () => {
   let originalConfigDir
 
   beforeEach(async () => {
-    tempDir = await fs.mkdtemp(join(tmpdir(), 'cardingest-test-'))
+    tempDir = await fs.mkdtemp(join(tmpdir(), 'ingestio-test-'))
 
     // Mock the CONFIG_DIR by temporarily changing the module
     const configModule = await import('../src/config.js')

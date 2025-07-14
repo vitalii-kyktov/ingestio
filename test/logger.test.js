@@ -9,7 +9,7 @@ describe('Logger', () => {
   let logger
 
   beforeEach(async () => {
-    tempDir = await fs.mkdtemp(join(tmpdir(), 'cardingest-logger-test-'))
+    tempDir = await fs.mkdtemp(join(tmpdir(), 'ingestio-logger-test-'))
   })
 
   afterEach(async () => {

@@ -9,7 +9,7 @@ describe('GPS Integration Tests', () => {
   let testFile
 
   beforeEach(async () => {
-    tempDir = await fs.mkdtemp(join(tmpdir(), 'cardingest-gps-integration-'))
+    tempDir = await fs.mkdtemp(join(tmpdir(), 'ingestio-gps-integration-'))
     testFile = join(tempDir, 'test.jpg')
 
     // Create a minimal JPEG file for testing

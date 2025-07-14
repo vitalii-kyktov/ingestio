@@ -290,7 +290,7 @@ class Logger {
 
   async saveReport(report) {
     try {
-      const reportsDir = join(homedir(), '.cardingest', 'reports')
+      const reportsDir = join(homedir(), '.ingestio', 'reports')
       await fs.mkdir(reportsDir, { recursive: true })
 
       const filename = this.reportFile || `import-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`

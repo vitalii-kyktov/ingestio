@@ -3,7 +3,7 @@ import { join, dirname } from 'path'
 import { homedir } from 'os'
 import YAML from 'yaml'
 
-const CONFIG_DIR = join(homedir(), '.cardingest', 'profiles')
+const CONFIG_DIR = join(homedir(), '.ingestio', 'profiles')
 
 export async function ensureConfigDir() {
   await fs.mkdir(CONFIG_DIR, { recursive: true })

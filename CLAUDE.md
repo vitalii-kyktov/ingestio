@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-`cardingest` is a CLI tool for importing raw media from SD cards into structured local footage libraries. It uses a profile-based system where each camera/workflow has its own configuration defining source paths, destination structure, and file handling preferences.
+`ingestio` is a CLI tool for importing raw media from SD cards into structured local footage libraries. It uses a profile-based system where each camera/workflow has its own configuration defining source paths, destination structure, and file handling preferences.
 
 ## Common Commands
 
@@ -44,7 +44,7 @@ bun start --profile dji-drone --log-level info --report my-import-session.txt
 - Import execution coordination
 
 **Configuration System (`src/config.js`)**: Manages profile storage and validation:
-- Profiles stored as YAML files in `~/.cardingest/profiles/`
+- Profiles stored as YAML files in `~/.ingestio/profiles/`
 - Profile validation ensures required fields are present
 - Automatic config directory creation
 
@@ -60,11 +60,11 @@ bun start --profile dji-drone --log-level info --report my-import-session.txt
 - Detailed file transfer logging with size and timing metrics
 - Structured text report generation for import sessions
 - Progress tracking and error collection
-- Report storage in `~/.cardingest/reports/`
+- Report storage in `~/.ingestio/reports/`
 
 ### Data Flow
 
-1. **Profile Selection**: CLI loads all profiles from `~/.cardingest/profiles/`, presents selection UI
+1. **Profile Selection**: CLI loads all profiles from `~/.ingestio/profiles/`, presents selection UI
 2. **Configuration**: Selected profile can be overridden via CLI flags or interactive prompts
 3. **Validation**: Profile structure validated for required fields
 4. **File Discovery**: Source directory recursively scanned, files filtered by extension rules
@@ -79,7 +79,7 @@ bun start --profile dji-drone --log-level info --report my-import-session.txt
 
 ## Profile System
 
-Profiles define complete import workflows and are stored in `~/.cardingest/profiles/` as YAML files. Each profile specifies:
+Profiles define complete import workflows and are stored in `~/.ingestio/profiles/` as YAML files. Each profile specifies:
 
 - Source/destination paths
 - Camera label for filename generation
@@ -117,7 +117,7 @@ The logging system provides comprehensive tracking of import operations with con
 - **Structured Format**: Human-readable text format suitable for archiving
 
 ### Report Storage
-Reports are automatically saved to `~/.cardingest/reports/` with timestamped filenames unless a custom name is provided. The structured format makes reports suitable for:
+Reports are automatically saved to `~/.ingestio/reports/` with timestamped filenames unless a custom name is provided. The structured format makes reports suitable for:
 - Progress auditing and verification
 - Performance analysis and optimization
 - Future implementation of resume functionality for interrupted sessions
