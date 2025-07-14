@@ -1,20 +1,18 @@
 # ingestio
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
 A powerful, intelligent command-line utility for importing and organizing raw media from SD cards and storage devices into structured local libraries. Built for photographers, videographers, and content creators who need reliable, automated media management workflows.
 
 ## Why ingestio?
 
-**The Problem**: Modern cameras and drones generate thousands of files across multiple formats (RAW, JPEG, video, subtitles, metadata), but importing them manually is time-consuming and error-prone. Traditional file copy tools don't understand media workflows, leading to:
+**Modern Media Challenges**: Today's cameras and drones generate thousands of files across multiple formats (RAW, JPEG, video, subtitles, metadata). Managing this efficiently requires more than simple file copying - you need intelligent organization that understands media workflows:
 
-- ❌ Inconsistent file organization
-- ❌ Lost companion files (like SRT subtitles)
-- ❌ Timestamp mismatches between file pairs
-- ❌ Missing or invalid GPS metadata
-- ❌ Filename collisions and overwrites
+- 📂 **Consistent Organization**: Automatic date-based structure with configurable naming
+- 🔗 **Preserve Relationships**: Keep companion files together (video + SRT subtitles)  
+- ⏰ **Smart Timestamps**: Handle EXIF dates and timezone edge cases correctly
+- 🌍 **Location Intelligence**: Validate and enhance GPS metadata automatically
+- 🛡️ **Collision Safety**: Smart handling when files have the same name
 
-**The Solution**: ingestio provides profile-based automation that understands media workflows, preserves file relationships, validates metadata, and organizes everything consistently.
+**The Solution**: ingestio provides profile-based automation that understands media workflows, preserves file relationships, validates metadata, and organizes everything consistently with zero manual intervention.
 
 ## Key Features
 
@@ -383,11 +381,11 @@ Reports are saved to `~/.ingestio/reports/` and can be used for:
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+We welcome contributions! 
 
 ### Development Setup
 ```bash
-git clone https://github.com/your-username/ingestio.git
+git clone https://github.com/vitalii-kyktov/ingestio.git
 cd ingestio
 bun install
 
@@ -400,16 +398,6 @@ bun test --watch
 # Format code
 bunx prettier --write "src/**/*.js" "test/**/*.js"
 ```
-
-## License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
-## Support
-
-- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/your-username/ingestio/issues)
-- 💡 **Feature Requests**: [GitHub Discussions](https://github.com/your-username/ingestio/discussions)  
-- 📖 **Documentation**: [Wiki](https://github.com/your-username/ingestio/wiki)
 
 ---
 
