@@ -1,113 +1,387 @@
 # cardingest
 
-An intelligent, interactive command-line utility for importing raw media from SD cards into structured local footage libraries.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Features
+A powerful, intelligent command-line utility for importing and organizing raw media from SD cards and storage devices into structured local libraries. Built for photographers, videographers, and content creators who need reliable, automated media management workflows.
 
-- **Profile-based imports**: Create reusable import profiles for different cameras/workflows
-- **Interactive CLI**: Guided prompts for selecting profiles and overriding settings
-- **Headless mode**: Scriptable automation with command-line flags
-- **Smart date handling**: Uses EXIF `DateTimeOriginal` with fallback to file modification time
-- **Collision prevention**: Automatically handles filename conflicts
-- **Flexible file filtering**: Include/exclude by extension or folder
-- **Copy or move operations**: Choose whether to copy files or move them
+## Why cardingest?
+
+**The Problem**: Modern cameras and drones generate thousands of files across multiple formats (RAW, JPEG, video, subtitles, metadata), but importing them manually is time-consuming and error-prone. Traditional file copy tools don't understand media workflows, leading to:
+
+- ❌ Inconsistent file organization
+- ❌ Lost companion files (like SRT subtitles)
+- ❌ Timestamp mismatches between file pairs
+- ❌ Missing or invalid GPS metadata
+- ❌ Filename collisions and overwrites
+
+**The Solution**: cardingest provides profile-based automation that understands media workflows, preserves file relationships, validates metadata, and organizes everything consistently.
+
+## Key Features
+
+### 🎯 **Profile-Based Workflows**
+- Create reusable import profiles for different cameras and workflows
+- Store configurations as portable YAML files
+- Switch between profiles instantly for different projects
+
+### 📁 **Intelligent File Organization**
+- Automatic date-based folder structure (`YYYY-MM-DD/`)
+- Configurable filename formats with template placeholders
+- Preserves relationships between companion files (video + SRT subtitles)
+- Smart collision handling (rename or replace)
+
+### 🗓️ **Smart Date Handling**
+- Extracts EXIF `DateTimeOriginal` from images and videos
+- Falls back to file modification time when EXIF unavailable
+- Handles timezone edge cases and corrupted metadata
+- Special handling for problematic formats (DNG files)
+
+### 🌍 **GPS Location Enhancement**
+- Validates GPS coordinates (filters out invalid 0,0 placeholders)
+- Interactive GPS input with multiple coordinate formats
+- Automatic GPS embedding for files missing location data
+- Support for decimal degrees and cardinal directions
+
+### 🔧 **Flexible Operation Modes**
+- **Interactive mode**: Guided prompts for profile selection and overrides
+- **Headless mode**: Full automation for scripts and workflows
+- **Copy or move**: Choose whether to copy files or move them from source
+- **Comprehensive logging**: Detailed reports with transfer speeds and error tracking
+
+### 🔗 **File Relationship Preservation**
+- Groups related files by basename (e.g., `video.mp4` + `video.srt`)
+- Applies consistent naming to entire file groups
+- Perfect for DJI drones, professional cameras, and multi-format workflows
 
 ## Installation
 
+### Prerequisites
+- [Bun](https://bun.sh) (JavaScript runtime)
+- [exiftool](https://exiftool.org) (for GPS metadata writing)
+
+### Install
 ```bash
+# Clone the repository
+git clone https://github.com/your-username/cardingest.git
+cd cardingest
+
+# Install dependencies
 bun install
-```
 
-## Usage
-
-### Interactive Mode
-
-```bash
-# Start interactive import
+# Run the tool
 bun start
-
-# Use specific profile
-bun start --profile dji-drone
 ```
 
-### Headless Mode
-
+### Install exiftool (for GPS features)
 ```bash
-# Run with profile in headless mode
+# macOS
+brew install exiftool
+
+# Ubuntu/Debian
+sudo apt install exiftool
+
+# Windows
+# Download from https://exiftool.org
+```
+
+## Quick Start
+
+### 1. Create Your First Profile
+```bash
+bun start
+# → Select "Create new profile"
+# → Follow the guided setup
+```
+
+### 2. Import with Interactive Mode
+```bash
+# Use any existing profile
+bun start --profile dji-drone
+
+# The tool will:
+# ✓ Show profile settings
+# ✓ Allow overrides
+# ✓ Confirm before processing
+# ✓ Display progress and results
+```
+
+### 3. Automated/Headless Mode
+```bash
+# Fully automated import
 bun start --profile dji-drone --headless
 
-# Override settings
-bun start --profile dji-drone --source /Volumes/SD_CARD --destination ~/MyFootage --headless
+# With GPS coordinates
+bun start --profile dji-drone --gps "40.7128,-74.0060" --headless
+
+# Override source and destination
+bun start --profile travel-cam --source /Volumes/SD_CARD --destination ~/Vacation2024 --headless
 ```
 
-### Command Line Options
+## Usage Examples
 
-- `-h, --help`: Show help message
-- `-p, --profile <name>`: Use specific profile
-- `-s, --source <path>`: Override source path
-- `-d, --destination <path>`: Override destination path
-- `-c, --camera <label>`: Override camera label
-- `--headless`: Run without interactive prompts
+### Basic Interactive Import
+```bash
+# Start with profile selection
+bun start
 
-## Profiles
+# Use specific profile with confirmation
+bun start --profile canon-r5
+```
 
-Profiles are stored in `~/.cardingest/profiles/` as YAML files.
+### Automated Workflows
+```bash
+# Copy files from SD card
+bun start --profile dji-drone --source /Volumes/DJI_SD --headless
+
+# Move files (remove from source)
+bun start --profile gopro --source /Volumes/GOPRO --destination ~/ActionCam --headless
+
+# Add GPS coordinates to files missing location data
+bun start --profile travel-photography --gps "48.8566,2.3522" --headless
+
+# Skip GPS prompts in headless mode
+bun start --profile studio-photography --gps-skip --headless
+```
+
+### Advanced Options
+```bash
+# Generate detailed report
+bun start --profile dji-drone --log-level debug --report detailed-import.txt
+
+# Handle file collisions by replacing
+bun start --profile backup-import --on-collision replace --headless
+
+# Override multiple settings
+bun start --profile base-profile \\
+  --source /custom/source \\
+  --destination /custom/dest \\
+  --camera "CustomCam" \\
+  --log-level info \\
+  --headless
+```
+
+## Configuration
 
 ### Profile Structure
 
+Profiles are stored as YAML files in `~/.cardingest/profiles/`. Here's a complete example:
+
 ```yaml
+# ~/.cardingest/profiles/dji-mini-pro-4.yaml
 sourcePath: /Volumes/DJI_SD
-destinationRoot: ~/Footage
-cameraLabel: DJI
+destinationRoot: ~/Aerial_Footage
+cameraLabel: DJI_Mini4Pro
+
+# File filtering
 includeExtensions:
-  - .jpg
-  - .jpeg
-  - .dng
-  - .mp4
-  - .mov
-excludeExtensions: []
+  - .mp4    # Videos
+  - .mov    # Videos  
+  - .jpg    # Photos
+  - .jpeg   # Photos
+  - .dng    # RAW photos
+  - .srt    # Subtitles
+excludeExtensions:
+  - .lrf    # Log files (optional)
 excludeFolders:
-  - DCIM/.thumbnails
   - System Volume Information
-copyFiles: true
-useExifDate: true
+  - .thumbnails
+  - .Trashes
+
+# Operation settings  
+transferMode: copy              # or 'move' to delete from source
+useExifDate: true              # Extract dates from EXIF metadata
+onCollision: rename            # or 'replace' to overwrite
+logLevel: info                 # debug, info, warn, error
+
+# File relationships
+maintainFileRelationships: true
+primaryExtensions: ['.mp4', '.mov', '.jpg', '.jpeg', '.dng']
+companionExtensions: ['.srt', '.lrf', '.xmp']
+
+# Filename format (NEW!)
+filenameFormat: '{date}_{time}_{camera}'  # YYYY-MM-DD_HH-MM-SS_Camera.ext
+
+# GPS settings (NEW!)
+addGpsData: false              # Prompt for GPS coordinates
 ```
 
-### Profile Fields
+### Available Filename Format Placeholders
 
-- `sourcePath`: Path to SD card or source directory
-- `destinationRoot`: Root directory for organized footage
-- `cameraLabel`: Label used in filenames (e.g., "DJI", "CanonR5")
-- `includeExtensions`: File extensions to import
-- `excludeExtensions`: File extensions to skip
-- `excludeFolders`: Folder names to skip
-- `copyFiles`: `true` to copy files, `false` to move them
-- `useExifDate`: `true` to use EXIF date, `false` to use file modification time
+- `{date}`: ISO date (YYYY-MM-DD)
+- `{time}`: Time with dashes (HH-MM-SS)  
+- `{camera}`: Camera label from profile
+
+Examples:
+- `'{date}_{time}_{camera}'` → `2024-07-13_14-30-45_DJI.mp4`
+- `'{camera}_{date}_{time}'` → `DJI_2024-07-13_14-30-45.mp4`
+- `'{time}_{camera}_{date}'` → `14-30-45_DJI_2024-07-13.mp4`
+
+### GPS Coordinate Formats
+
+cardingest accepts GPS coordinates in multiple formats:
+
+```bash
+# Decimal degrees
+--gps "40.7128,-74.0060"
+--gps "40.7128, -74.0060"
+
+# Cardinal directions
+--gps "40.7128 N, 74.0060 W"  
+--gps "40.7128N, 74.0060W"
+
+# Mixed positive/negative
+--gps "-33.8688, 151.2093"    # Sydney
+```
 
 ## Output Structure
 
-Files are organized as:
+Files are organized in a clean, date-based hierarchy:
+
 ```
 ~/Footage/
-├── 2024-01-15/
-│   ├── 09_30_45_DJI.jpg
-│   ├── 09_30_47_DJI.jpg
-│   └── 09_31_12_DJI.mp4
-└── 2024-01-16/
-    ├── 14_22_33_DJI.jpg
-    └── 14_22_35_DJI.jpg
+├── 2024-07-13/
+│   ├── 14-30-45_DJI_Mini4Pro.MP4
+│   ├── 14-30-45_DJI_Mini4Pro.SRT
+│   ├── 14-31-12_DJI_Mini4Pro.JPG
+│   └── 14-31-12_DJI_Mini4Pro.DNG
+├── 2024-07-14/
+│   ├── 09-15-33_DJI_Mini4Pro.MP4
+│   └── 09-15-33_DJI_Mini4Pro.SRT
+└── reports/
+    ├── import-2024-07-13T14-30-45-123Z.txt
+    └── custom-report-name.txt
+```
+
+## Command Line Reference
+
+```bash
+cardingest [options]
+
+Options:
+  -h, --help                    Show help message
+  -p, --profile <name>          Use specific profile
+  -s, --source <path>           Override source path
+  -d, --destination <path>      Override destination path  
+  -c, --camera <label>          Override camera label
+  --headless                    Run without interactive prompts
+  --on-collision <mode>         Handle file collisions: 'rename' or 'replace'
+  -l, --log-level <level>       Set log level: debug, info, warn, error
+  -r, --report [filename]       Generate import report (optional custom name)
+  -g, --gps <coordinates>       Set GPS coordinates for session
+  --gps-skip                    Skip GPS prompts in headless mode
+
+Examples:
+  cardingest                                    # Interactive mode
+  cardingest --profile dji-drone                # Use profile with confirmation  
+  cardingest --profile dji-drone --headless     # Fully automated
+  cardingest --profile dji-drone --gps "40.7128,-74.0060" --headless
+  cardingest --profile dji-drone --source /Volumes/SD --headless
 ```
 
 ## Sample Profiles
 
-The tool includes sample profiles for:
-- DJI Drones (`dji-drone.yaml`)
-- Canon R5 (`canon-r5.yaml`)
-- GoPro (`gopro.yaml`)
+cardingest works great with these camera systems:
 
-## Dependencies
+### DJI Drones (Mini, Air, Mavic series)
+```yaml
+sourcePath: /Volumes/DJI_SD  
+destinationRoot: ~/Aerial_Footage
+cameraLabel: DJI_Mini4Pro
+includeExtensions: ['.mp4', '.mov', '.jpg', '.dng', '.srt']
+filenameFormat: '{date}_{time}_{camera}'
+maintainFileRelationships: true
+```
 
-- **prompts**: Interactive CLI prompts
-- **yaml**: YAML configuration parsing
-- **exifr**: EXIF data extraction
-- **Bun**: JavaScript runtime and package manager
+### Canon Mirrorless (R5, R6, etc.)
+```yaml
+sourcePath: /Volumes/CANON_SD
+destinationRoot: ~/Photography  
+cameraLabel: CanonR5
+includeExtensions: ['.cr3', '.cr2', '.jpg', '.mp4']
+filenameFormat: '{camera}_{date}_{time}'
+useExifDate: true
+```
+
+### Sony Alpha Series
+```yaml
+sourcePath: /Volumes/SONY_SD
+destinationRoot: ~/Sony_Shoots
+cameraLabel: A7IV
+includeExtensions: ['.arw', '.jpg', '.mp4', '.xavc']
+filenameFormat: '{date}_{time}_{camera}'
+```
+
+### GoPro Action Cameras  
+```yaml
+sourcePath: /Volumes/GOPRO
+destinationRoot: ~/Action_Footage
+cameraLabel: GoPro12
+includeExtensions: ['.mp4', '.jpg', '.gpr']
+excludeFolders: ['MISC', '100GOPRO/THUMBNAILS']
+```
+
+## Logging and Reports
+
+### Log Levels
+- **debug**: Verbose output with file-by-file details
+- **info**: Standard progress updates (default)
+- **warn**: Warnings and non-critical issues
+- **error**: Error conditions only
+
+### Report Generation
+```bash
+# Generate report with default timestamped name
+bun start --profile dji-drone --report
+
+# Generate report with custom name  
+bun start --profile dji-drone --report "vacation-import-2024.txt"
+
+# Debug-level report with detailed file transfer logs
+bun start --profile dji-drone --log-level debug --report
+```
+
+Reports include:
+- Session information and timing
+- Profile configuration used
+- Transfer summary with speeds and totals
+- Individual file transfer details (debug mode)
+- Complete error log with context
+
+Reports are saved to `~/.cardingest/reports/` and can be used for:
+- Progress auditing and verification
+- Performance analysis  
+- Future resume functionality
+- Workflow documentation
+
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+### Development Setup
+```bash
+git clone https://github.com/your-username/cardingest.git
+cd cardingest
+bun install
+
+# Run tests
+bun test
+
+# Run tests in watch mode  
+bun test --watch
+
+# Format code
+bunx prettier --write "src/**/*.js" "test/**/*.js"
+```
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+## Support
+
+- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/your-username/cardingest/issues)
+- 💡 **Feature Requests**: [GitHub Discussions](https://github.com/your-username/cardingest/discussions)  
+- 📖 **Documentation**: [Wiki](https://github.com/your-username/cardingest/wiki)
+
+---
+
+**Built for creators, by creators.** cardingest handles the tedious parts of media management so you can focus on what matters: creating amazing content.
