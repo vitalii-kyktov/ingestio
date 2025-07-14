@@ -58,17 +58,41 @@ A powerful, intelligent command-line utility for importing and organizing raw me
 - [Bun](https://bun.sh) (JavaScript runtime)
 - [exiftool](https://exiftool.org) (for GPS metadata writing)
 
-### Install
+## Installation
+
+### Method 1: Global Installation (Recommended)
+```bash
+# Install directly from GitHub
+npm install -g git+https://github.com/vitalii-kyktov/ingestio.git
+
+# Verify installation
+ingestio --help
+```
+
+### Method 2: Clone and Install
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/ingestio.git
+git clone https://github.com/vitalii-kyktov/ingestio.git
+cd ingestio
+
+# Install globally
+npm install -g .
+
+# Verify installation
+ingestio --help
+```
+
+### Method 3: Development Setup
+```bash
+# Clone for development
+git clone https://github.com/vitalii-kyktov/ingestio.git
 cd ingestio
 
 # Install dependencies
 bun install
 
-# Run the tool
-bun start
+# Run directly with Bun
+ingestio
 ```
 
 ### Install exiftool (for GPS features)
@@ -87,7 +111,7 @@ sudo apt install exiftool
 
 ### 1. Create Your First Profile
 ```bash
-bun start
+ingestio
 # → Select "Create new profile"
 # → Follow the guided setup
 ```
@@ -95,7 +119,7 @@ bun start
 ### 2. Import with Interactive Mode
 ```bash
 # Use any existing profile
-bun start --profile dji-drone
+ingestio --profile dji-drone
 
 # The tool will:
 # ✓ Show profile settings
@@ -107,13 +131,13 @@ bun start --profile dji-drone
 ### 3. Automated/Headless Mode
 ```bash
 # Fully automated import
-bun start --profile dji-drone --headless
+ingestio --profile dji-drone --headless
 
 # With GPS coordinates
-bun start --profile dji-drone --gps "40.7128,-74.0060" --headless
+ingestio --profile dji-drone --gps "40.7128,-74.0060" --headless
 
 # Override source and destination
-bun start --profile travel-cam --source /Volumes/SD_CARD --destination ~/Vacation2024 --headless
+ingestio --profile travel-cam --source /Volumes/SD_CARD --destination ~/Vacation2024 --headless
 ```
 
 ## Usage Examples
@@ -121,37 +145,37 @@ bun start --profile travel-cam --source /Volumes/SD_CARD --destination ~/Vacatio
 ### Basic Interactive Import
 ```bash
 # Start with profile selection
-bun start
+ingestio
 
 # Use specific profile with confirmation
-bun start --profile canon-r5
+ingestio --profile canon-r5
 ```
 
 ### Automated Workflows
 ```bash
 # Copy files from SD card
-bun start --profile dji-drone --source /Volumes/DJI_SD --headless
+ingestio --profile dji-drone --source /Volumes/DJI_SD --headless
 
 # Move files (remove from source)
-bun start --profile gopro --source /Volumes/GOPRO --destination ~/ActionCam --headless
+ingestio --profile gopro --source /Volumes/GOPRO --destination ~/ActionCam --headless
 
 # Add GPS coordinates to files missing location data
-bun start --profile travel-photography --gps "48.8566,2.3522" --headless
+ingestio --profile travel-photography --gps "48.8566,2.3522" --headless
 
 # Skip GPS prompts in headless mode
-bun start --profile studio-photography --gps-skip --headless
+ingestio --profile studio-photography --gps-skip --headless
 ```
 
 ### Advanced Options
 ```bash
 # Generate detailed report
-bun start --profile dji-drone --log-level debug --report detailed-import.txt
+ingestio --profile dji-drone --log-level debug --report detailed-import.txt
 
 # Handle file collisions by replacing
-bun start --profile backup-import --on-collision replace --headless
+ingestio --profile backup-import --on-collision replace --headless
 
 # Override multiple settings
-bun start --profile base-profile \\
+ingestio --profile base-profile \\
   --source /custom/source \\
   --destination /custom/dest \\
   --camera "CustomCam" \\
@@ -330,13 +354,13 @@ excludeFolders: ['MISC', '100GOPRO/THUMBNAILS']
 ### Report Generation
 ```bash
 # Generate report with default timestamped name
-bun start --profile dji-drone --report
+ingestio --profile dji-drone --report
 
 # Generate report with custom name  
-bun start --profile dji-drone --report "vacation-import-2024.txt"
+ingestio --profile dji-drone --report "vacation-import-2024.txt"
 
 # Debug-level report with detailed file transfer logs
-bun start --profile dji-drone --log-level debug --report
+ingestio --profile dji-drone --log-level debug --report
 ```
 
 Reports include:
