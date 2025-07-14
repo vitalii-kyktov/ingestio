@@ -239,13 +239,13 @@ Files are organized in a clean, date-based hierarchy:
 ```
 ~/Footage/
 ├── 2024-07-13/
-│   ├── 14-30-45_DJI_Mini4Pro.MP4
-│   ├── 14-30-45_DJI_Mini4Pro.SRT
-│   ├── 14-31-12_DJI_Mini4Pro.JPG
-│   └── 14-31-12_DJI_Mini4Pro.DNG
+│   ├── 2024-07-13_14-30-45_DJI_Mini4Pro.MP4
+│   ├── 2024-07-13_14-30-45_DJI_Mini4Pro.SRT
+│   ├── 2024-07-13_14-31-12_DJI_Mini4Pro.JPG
+│   └── 2024-07-13_14-31-12_DJI_Mini4Pro.DNG
 ├── 2024-07-14/
-│   ├── 09-15-33_DJI_Mini4Pro.MP4
-│   └── 09-15-33_DJI_Mini4Pro.SRT
+│   ├── 2024-07-14_09-15-33_DJI_Mini4Pro.MP4
+│   └── 2024-07-14_09-15-33_DJI_Mini4Pro.SRT
 └── reports/
     ├── import-2024-07-13T14-30-45-123Z.txt
     └── custom-report-name.txt
