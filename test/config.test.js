@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { promises as fs } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
+import { homedir } from 'os'
 import { loadProfiles, validateProfile, saveProfile } from '../src/config.js'
 
 describe('config.js', () => {
@@ -277,4 +278,5 @@ includeExtensions:
       expect(files).toHaveLength(0)
     })
   })
+
 })

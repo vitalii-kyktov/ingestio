@@ -4,26 +4,25 @@ import { homedir } from 'os'
 import YAML from 'yaml'
 
 const CONFIG_DIR = join(homedir(), '.ingestio', 'profiles')
+const LOCAL_PROFILES_DIR = join(process.cwd(), 'profiles')
 
 export async function ensureConfigDir() {
   await fs.mkdir(CONFIG_DIR, { recursive: true })
 }
 
-export async function loadProfiles() {
-  await ensureConfigDir()
-
+async function loadProfilesFromDirectory(directory) {
   try {
-    const files = await fs.readdir(CONFIG_DIR)
+    const files = await fs.readdir(directory)
     const yamlFiles = files.filter(f => f.endsWith('.yaml') || f.endsWith('.yml'))
 
     const profiles = {}
 
     for (const file of yamlFiles) {
-      const filePath = join(CONFIG_DIR, file)
+      const filePath = join(directory, file)
       const content = await fs.readFile(filePath, 'utf-8')
       const profile = YAML.parse(content)
       const name = file.replace(/\.(yaml|yml)$/, '')
-      profiles[name] = { ...profile, name }
+      profiles[name] = { ...profile, name, source: directory }
     }
 
     return profiles
@@ -33,6 +32,27 @@ export async function loadProfiles() {
     }
     throw error
   }
+}
+
+export async function loadProfiles() {
+  await ensureConfigDir()
+
+  const homeProfiles = await loadProfilesFromDirectory(CONFIG_DIR)
+  const localProfiles = await loadProfilesFromDirectory(LOCAL_PROFILES_DIR)
+
+  // Merge profiles, with local profiles taking precedence over home profiles
+  const profiles = { ...homeProfiles }
+  
+  for (const [name, profile] of Object.entries(localProfiles)) {
+    if (profiles[name]) {
+      // Add suffix to indicate it's from local directory if there's a conflict
+      profiles[`${name} (local)`] = profile
+    } else {
+      profiles[name] = profile
+    }
+  }
+
+  return profiles
 }
 
 export async function saveProfile(name, profile) {
